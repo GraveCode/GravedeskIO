@@ -1,0 +1,19 @@
+{
+	"name": "GravedeskIO",
+	"version": "0.1",
+	"author": "jgater@gmail.com",
+	"description": "backend for the Gravedesk helpdesk ticket system",
+	"dependencies" : {
+		"async" : "0.2.x",
+		"coffee-script": "1.6.x",
+		"contextio": "0.3.x"
+	},
+	"devDependencies": {
+		"mocha": "1.11.x",
+		"chai": "1.6.x"
+	},
+	"repository" : { 
+		"type" : "git"
+	, "url" : "https://github.com/GraveCode/GravedeskIO"
+	}
+}
