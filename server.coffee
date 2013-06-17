@@ -10,8 +10,7 @@ db = nano.use settings.dbName
 
 ## routes
 
-app.get '/', (req, res) ->
-	res.send ('Hello World')
+require("./routes")(app)
 
 ## start servers
 
