@@ -1,12 +1,13 @@
 {
 	"name": "GravedeskIO",
-	"version": "0.1",
+	"version": "0.0.1",
 	"author": "jgater@gmail.com",
 	"description": "backend for the Gravedesk helpdesk ticket system",
 	"dependencies" : {
 		"async" : "0.2.x",
 		"coffee-script": "1.6.x",
-		"contextio": "0.3.x"
+		"contextio": "0.3.x",
+		"express": "3.2.x"
 	},
 	"devDependencies": {
 		"mocha": "1.11.x",
