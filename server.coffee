@@ -3,10 +3,14 @@
 settings = require './settings'
 express = require 'express'
 async = require 'async'
+cradle = require 'cradle'
 app = express()
-nano = require('nano')(settings.dbServer)
-db = nano.use settings.dbName
 
+c = new (cradle.Connection)(settings.dbServer, settings.dbPort,
+			cache: true
+			raw: false
+		)
+db = c.database settings.dbName
 
 ## routes
 
@@ -17,21 +21,51 @@ require("./routes")(app)
 async.series([
 	(callback) ->
 		# couchdb connection
-		nano.db.create settings.dbName, (err, body) ->		
+		db.exists (err, exists) ->
 			if err
-				# db probably already exists, let's check
-				nano.db.get settings.dbName, (err, body) ->
-					# couldn't get db info, we have a problem
-					if err
-						console.log 'Error connecting to ' + settings.dbName + ' on ' + settings.dbServer
-						callback (err)
-					else
-						console.log 'Connected to database ' + settings.dbName + ' on ' + settings.dbServer
-						callback (null)
+				callback err
+			else if exists
+				console.log 'Connected to database "' + settings.dbName + '" on ' + settings.dbServer
+				callback null
 			else
-				# db successfully created - first run!
-				console.log 'Database ' + settings.dbName + ' on ' + settings.dbServer + ' created!'
-				callback(null)
+				console.log 'Creating database ' + settings.dbName + ' on ' + settings.dbServer
+				db.create()
+				db.save "_design/tickets",
+					open:
+						map: (doc) ->
+							if doc.type==="ticket" && !doc.closed
+								emit doc.modified, doc
+					closed: 
+						map: (doc) ->
+							if doc.type==="ticket" && doc.closed
+								emit doc.modified, doc
+
+				db.save "_design/messages",
+					notprivate:
+						map: (doc) ->
+							if doc.type==="message" && !doc.closed && !private
+								emit doc.date, doc
+					open:
+						map: (doc) ->
+							if doc.type==="message" && !doc.closed
+					closed: 
+						map: (doc) ->
+							if doc.type==="message" && doc.closed
+								emit doc.date, doc
+
+				db.save "_design/autoreplies",
+					open:
+						map: (doc) ->
+							if doc.type==="autoreply" && !doc.closed
+								emit doc.date, doc
+					closed: 
+						map: (doc) ->
+							if doc.type==="autoreply" && doc.closed
+								emit doc.date, doc
+
+
+				# TODO: add design documents here
+				callback null
 
 	, (callback) -> 
 		# express
