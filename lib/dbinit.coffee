@@ -5,7 +5,7 @@ addViews = (db, cb) ->
 	async.series([
 		# delete listed designs in case they've changed views
 		(callback) ->
-			designs = ['tickets', 'messages']
+			designs = ['tickets', 'messages', 'autoreplies']
 			deleteDesign = (design, subcallback) ->
 				designName = '_design/'+design
 				db.get designName, (err, doc) ->
@@ -35,6 +35,15 @@ addViews = (db, cb) ->
 			db.save '_design/tickets', ticketsViews, callback
 
 		, (callback) ->
+			# views for autoreplies
+			autorepliesViews = {
+				"all":
+					map: (doc) -> emit doc.ticketid, doc if doc.type is 'autoreply'
+			}
+			# save the autoreplies design document to the database
+			db.save '_design/autoreplies', autorepliesViews, callback
+
+		, (callback) ->
 			# views for messages
 			messagesViews = {
 				"all":
@@ -48,8 +57,8 @@ addViews = (db, cb) ->
 
 # main function exported to server.coffee
 module.exports = (couchdb, callback) ->
-	c = new (cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
-			cache: true
+	c = new(cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
+			cache: false
 			raw: false
 		)
 	db = c.database couchdb.dbName
@@ -60,7 +69,8 @@ module.exports = (couchdb, callback) ->
 		if err
 			callback err
 		else if exists
-			# db exists so add design document views, and return db object
+			# db exists, so 
+			# add design document views, and return db object
 			console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
 			# check if we wish to create views 
 			if couchdb.overwriteViews
@@ -74,10 +84,8 @@ module.exports = (couchdb, callback) ->
 			# db doesn't exist yet, so we create it and add the design document views
 			db.create()
 			console.log 'Created database ' + couchdb.dbName + ' on ' + couchdb.dbServer
-			if couchdb.overwriteViews
-				console.log "Adding design documents"
-				addViews db, (err) ->
-					callback err, db
-			else 
-				callback null, db
+			console.log "Adding design documents"
+			addViews db, (err) ->
+				callback err, db
+
 
