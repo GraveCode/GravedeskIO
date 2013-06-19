@@ -37,7 +37,7 @@ addViews = (db, cb) ->
 	# and pass back any errors to the callback			
 	], cb)
 
-
+# main function exported to server.coffee
 module.exports = (couchdb, callback) ->
 	c = new (cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
 			cache: true

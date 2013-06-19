@@ -15,6 +15,7 @@ require('./routes')(app)
 
 async.series([
 	(callback) ->
+		# setup couchdb database connection
 		dbinit settings.couchdb, (err, database) ->
 			if err
 				callback err
@@ -33,7 +34,7 @@ async.series([
 		callback null
 
 ], (err) ->
-# callback error handler
+	# callback error handler
 	if err
 		console.log "Problem with starting core services; "
 		console.log err
