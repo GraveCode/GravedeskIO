@@ -20,6 +20,10 @@ async.series([
 				callback err
 			else
 				db = database
+				db.view 'tickets/open', {key: "systems"}, (err,doc) ->
+					console.dir doc
+				db.view 'tickets/open', {key: "support"}, (err,doc) ->
+					console.dir doc
 				callback null
 
 	, (callback) -> 
