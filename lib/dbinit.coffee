@@ -23,16 +23,25 @@ addViews = (db, cb) ->
 
 		# now we have a clean slate to add the new design documents
 		, (callback) ->
-				# views for tickets
-				ticketsViews = {
-					"open":
-						map: (doc) -> emit doc.group, doc if !doc.closed and doc.type is 'ticket'
+			# views for tickets
+			ticketsViews = {
+				"open":
+					map: (doc) -> emit doc.group, doc if !doc.closed and doc.type is 'ticket'
 
-					"closed":
-						map: (doc) -> emit doc.modified, doc if doc.closed and doc.type is 'ticket'
-				}
-				# save the tickets design document to the database
-				db.save '_design/tickets', ticketsViews, callback
+				"closed":
+					map: (doc) -> emit doc.modified, doc if doc.closed and doc.type is 'ticket'
+			}
+			# save the tickets design document to the database
+			db.save '_design/tickets', ticketsViews, callback
+
+		, (callback) ->
+			# views for messages
+			messagesViews = {
+				"all":
+					map: (doc) -> emit doc.ticketid, doc if doc.type is 'message'
+			}
+			# save the messages design document to the database
+			db.save '_design/messages', messagesViews, callback
 
 	# and pass back any errors to the callback			
 	], cb)
@@ -55,6 +64,7 @@ module.exports = (couchdb, callback) ->
 			console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
 			# check if we wish to create views 
 			if couchdb.overwriteViews
+				console.log "Adding design documents"
 				addViews db, (err) ->
 					callback err, db
 			else 
@@ -65,6 +75,7 @@ module.exports = (couchdb, callback) ->
 			db.create()
 			console.log 'Created database ' + couchdb.dbName + ' on ' + couchdb.dbServer
 			if couchdb.overwriteViews
+				console.log "Adding design documents"
 				addViews db, (err) ->
 					callback err, db
 			else 
