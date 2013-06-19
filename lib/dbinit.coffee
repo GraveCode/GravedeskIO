@@ -6,8 +6,8 @@ designs = ['tickets', 'messages']
 
 addViews = (db, cb) ->
 	async.series([
+		# delete listed designs in case they've changed views
 		(callback) ->
-			# delete listed designs in case they've changed views
 			deleteDesign = (design, subcallback) ->
 				designName = '_design/'+design
 				db.get designName, (err, doc) ->
@@ -22,18 +22,22 @@ addViews = (db, cb) ->
 
 			async.forEach designs, deleteDesign, callback
 
-			# now we have a clean slate to add the new design documents
+		# now we have a clean slate to add the new design documents
 		, (callback) ->
-				ticketViews = {
+				# views for tickets
+				ticketsViews = {
 					"open":
 						map: (doc) -> emit doc.group, doc if !doc.closed and doc.type is 'ticket'
 
 					"closed":
 						map: (doc) -> emit doc.modified, doc if doc.closed and doc.type is 'ticket'
 				}
+				db.save '_design/tickets', ticketsViews, callback
 
-				db.save '_design/tickets', ticketViews, callback
+		, (callback) ->
 
+
+	# and pass back any errors to the callback			
 	], cb)
 
 
@@ -49,11 +53,12 @@ module.exports = (couchdb, callback) ->
 		if err
 			callback err
 		else if exists
-			# db exists, callback with db
+			# db exists so add design document views, and return db object
 			console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
 			addViews db, (err) ->
 				callback err, db
 		else
+			# db doesn't exist yet, so we create it and add the design document views
 			db.create()
 			console.log 'Created database ' + couchdb.dbName + ' on ' + couchdb.dbServer
 			addViews db, (err) ->
