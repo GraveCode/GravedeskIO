@@ -37,18 +37,20 @@ addViews = (db, cb) ->
 						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], 1);}}"
 						reduce: "_count"
 				}
+				# message views
 				, { all:
 						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.created], doc);}}"
 				}
+				# autoreply views
 				, { all:
-						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.created], doc);}}"						
+						map: "function(doc) {if (doc.type === 'autoreply') {emit([doc.ticketid, doc.created], doc);}}"						
 				}
 			]
 
 			saveDesign = (design, subcallback) ->
 				designName = '_design/'+design
 				i = designs.indexOf design
-				console.log "saving design for " + designName
+				console.log "Saving design for " + designName
 				db.save designName, newdesigns[i], subcallback				
 
 			async.forEach designs, saveDesign, callback
@@ -74,6 +76,8 @@ module.exports = (couchdb, callback) ->
 			# db exists, so 
 			# add design document views, and return db object
 			console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
+			# remove old view data
+			db.viewCleanup()
 			# check if we wish to create views 
 			if couchdb.overwriteViews
 				console.log "Adding design documents"
