@@ -21,6 +21,11 @@ async.series([
 				callback err
 			else
 				db = database
+				# example queries
+				#db.view 'tickets/open', { startkey: [settings.groups[0]], endkey: [settings.groups[0],{}] } , (err,docs) ->
+				#	console.dir docs
+				#db.view 'tickets/count', { startkey: [settings.groups[0]], endkey: [settings.groups[0],{}], reduce: true} , (err,docs) ->
+				#	console.dir docs
 				callback null
 
 	, (callback) -> 

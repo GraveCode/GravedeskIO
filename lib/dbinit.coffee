@@ -1,11 +1,11 @@
 async = require 'async'
 cradle = require 'cradle'
+designs = ['tickets', 'messages', 'autoreplies']
 
 addViews = (db, cb) ->
 	async.series([
 		# delete listed designs in case they've changed views
 		(callback) ->
-			designs = ['tickets', 'messages', 'autoreplies']
 			deleteDesign = (design, subcallback) ->
 				designName = '_design/'+design
 				db.get designName, (err, doc) ->
@@ -23,42 +23,44 @@ addViews = (db, cb) ->
 
 		# now we have a clean slate to add the new design documents
 		, (callback) ->
-			# views for tickets
-			ticketsViews = {
-				"open":
-					map: (doc) -> emit doc.group, doc if !doc.closed and doc.type is 'ticket'
 
-				"closed":
-					map: (doc) -> emit doc.modified, doc if doc.closed and doc.type is 'ticket'
-			}
-			# save the tickets design document to the database
-			db.save '_design/tickets', ticketsViews, callback
+			# order must match that of designs array
+			newdesigns = [
+				# ticket views
+				{	open:
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], doc);}}"
 
-		, (callback) ->
-			# views for autoreplies
-			autorepliesViews = {
-				"all":
-					map: (doc) -> emit doc.ticketid, doc if doc.type is 'autoreply'
-			}
-			# save the autoreplies design document to the database
-			db.save '_design/autoreplies', autorepliesViews, callback
+					closed:
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit(doc.modified, doc);}}"
 
-		, (callback) ->
-			# views for messages
-			messagesViews = {
-				"all":
-					map: (doc) -> emit doc.ticketid, doc if doc.type is 'message'
-			}
-			# save the messages design document to the database
-			db.save '_design/messages', messagesViews, callback
+					count:
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], 1);}}"
+						reduce: "_count"
+				}
+				, { all:
+						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.created], doc);}}"
+				}
+				, { all:
+						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.created], doc);}}"						
+				}
+			]
+
+			saveDesign = (design, subcallback) ->
+				designName = '_design/'+design
+				i = designs.indexOf design
+				console.log "saving design for " + designName
+				db.save designName, newdesigns[i], subcallback				
+
+			async.forEach designs, saveDesign, callback
 
 	# and pass back any errors to the callback			
 	], cb)
 
+
 # main function exported to server.coffee
 module.exports = (couchdb, callback) ->
 	c = new(cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
-			cache: false
+			cache: true
 			raw: false
 		)
 	db = c.database couchdb.dbName
