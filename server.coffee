@@ -4,12 +4,48 @@ settings = require './settings'
 dbinit = require './lib/dbinit'
 express = require 'express'
 async = require 'async'
-app = express()
+
+
+passport = require 'passport'
+GoogleStrategy = require('passport-google').Strategy
+
 db = null
+
+# passport requirements
+
+passport.serializeUser (user, done) ->
+	done null, user
+
+passport.deserializeUser (obj, done) ->
+	done null, obj
+
+passport.use new GoogleStrategy(
+	returnURL: "https://gravedeskdev.clayesmore.com/auth/google/return"
+	realm: "https://gravedeskdev.clayesmore.com/"
+, (identifier, profile, done) ->
+	process.nextTick ->
+		profile.identifier = identifier
+		done null, profile
+)
+
+app = express()
+
+app.configure ->
+	app.set "views", __dirname + "/views"
+	app.set "view engine", "jade"
+	#app.use express.logger()
+	app.use express.cookieParser()
+	app.use express.bodyParser()
+	app.use express.methodOverride()
+	app.use express.session(secret: "keyboard cat")
+	app.use passport.initialize()
+	app.use passport.session()
+	app.use app.router
+	app.use express.static(__dirname + "/public")
 
 ## routes
 
-require('./routes')(app)
+require('./routes')(app, passport)
 
 ## start servers
 
