@@ -11,7 +11,9 @@
 		"cradle": "0.6.x",
 		"passport": "0.1.x",
 		"passport-google": "0.3.x",
-		"socket.io": "0.9.x"
+		"socket.io": "0.9.x",
+		"passport.socketio": "1.2.x"
+
 	},
 	"devDependencies": {
 		"mocha": "1.11.x",

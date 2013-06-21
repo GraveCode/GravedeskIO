@@ -7,17 +7,12 @@ async = require 'async'
 path = require 'path'
 
 passport = require 'passport'
+passportSocketIO = require 'passport.socketio'
 GoogleStrategy = require('passport-google').Strategy
 
 db = null
 app = express()
 
-# socket io setup
-
-appserver = require('http').createServer(app)
-io = require('socket.io').listen(appserver)
-io.set 'resource', '/node/socket.io'
-io.set('log level', 1);
 
 # passport requirements
 
@@ -27,9 +22,9 @@ passport.serializeUser (user, done) ->
 passport.deserializeUser (obj, done) ->
 	done null, obj
 
-returnURL = path.join settings.clientURL, "/node/google/return" 
+ 
 passport.use new GoogleStrategy(
-	returnURL: returnURL
+	returnURL: settings.clientURL + "/node/google/return"
 	realm: settings.clientURL
 , (identifier, profile, done) ->
 	process.nextTick ->
@@ -37,14 +32,36 @@ passport.use new GoogleStrategy(
 		done null, profile
 )
 
+MemoryStore = express.session.MemoryStore
+sessionStore = new MemoryStore()
+
 app.configure ->
 	app.use express.cookieParser()
 	app.use express.bodyParser()
 	app.use express.methodOverride()
-	app.use express.session(secret: "keyboard cat")
+	app.use express.session(store: sessionStore, secret: 'tom thumb', key: 'express.sid')
 	app.use passport.initialize()
 	app.use passport.session()
 	app.use app.router
+
+
+# socket io setup
+
+appserver = require('http').createServer(app)
+io = require('socket.io').listen(appserver)
+io.set 'resource', '/node/socket.io'
+io.set 'log level', 1 # disable debug log
+io.set "authorization", passportSocketIO.authorize(
+  cookieParser: express.cookieParser #or connect.cookieParser
+  key: "express.sid" #the cookie where express (or connect) stores its session id.
+  secret: 'tom thumb' #the session secret to parse the cookie
+  store: sessionStore #the session store that express uses
+  fail: (data, accept) -> # *optional* callbacks on success or fail
+    accept null, false # second param takes boolean on whether or not to allow handshake
+  success: (data, accept) ->
+    accept null, true
+)
+
 
 ## routes
 
@@ -84,7 +101,9 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-  socket.emit 'news', { hello: 'world' }
+  socket.emit 'news', "Hello, " + socket.handshake.user.displayName
+  console.log socket.handshake.user.displayName + " has connected."
+
 
 
 
