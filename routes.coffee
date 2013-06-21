@@ -4,33 +4,27 @@ module.exports = (app, passport) ->
 
 	ensureAuthenticated = (req, res, next) ->
 		return next()  if req.isAuthenticated()
-		res.redirect "/auth/google"
+		res.redirect "/node/google"
 
 	# standard pages
 	app.get "/", (req, res) ->
-		#res.render "index",
-		#	user: req.user
-		res.send "index page goes here"
+		res.send "GravedeskIO is running"
 	
-	app.get "/auth/account", ensureAuthenticated, (req, res) ->
-		#res.render "account",
-		#	user: req.user
+	app.get "/node/testaccount", ensureAuthenticated, (req, res) ->
 		res.send "Welcome, " + req.user.displayName
-		console.log req.user.emails[0].value + " logged in."
 	
-	
-	app.get "/auth/google", passport.authenticate("google",
-		failureRedirect: "/auth/google"
+	app.get "/node/google", passport.authenticate("google",
+		failureRedirect: "/node/google"
 	), (req, res) ->
 		res.redirect "/"
 	
-	app.get "/auth/google/return", passport.authenticate("google",
-		failureRedirect: "/auth/google"
+	app.get "/node/google/return", passport.authenticate("google",
+		failureRedirect: "/node/google"
 	), (req, res) ->
+		console.log req.user.emails[0].value + " logged in."
 		# will always redirect to here first when logged in
-		res.redirect "/auth/account"
+		res.redirect "/"
 	
-	app.get "/auth/logout", (req, res) ->
+	app.get "/node/logout", (req, res) ->
 		req.logout()
 		res.redirect "/"
-		

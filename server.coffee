@@ -4,12 +4,20 @@ settings = require './settings'
 dbinit = require './lib/dbinit'
 express = require 'express'
 async = require 'async'
-
+path = require 'path'
 
 passport = require 'passport'
 GoogleStrategy = require('passport-google').Strategy
 
 db = null
+app = express()
+
+# socket io setup
+
+appserver = require('http').createServer(app)
+io = require('socket.io').listen(appserver)
+io.set 'resource', '/node/socket.io'
+io.set('log level', 1);
 
 # passport requirements
 
@@ -19,21 +27,17 @@ passport.serializeUser (user, done) ->
 passport.deserializeUser (obj, done) ->
 	done null, obj
 
+returnURL = path.join settings.clientURL, "/node/google/return" 
 passport.use new GoogleStrategy(
-	returnURL: "https://gravedeskdev.clayesmore.com/auth/google/return"
-	realm: "https://gravedeskdev.clayesmore.com/"
+	returnURL: returnURL
+	realm: settings.clientURL
 , (identifier, profile, done) ->
 	process.nextTick ->
 		profile.identifier = identifier
 		done null, profile
 )
 
-app = express()
-
 app.configure ->
-	app.set "views", __dirname + "/views"
-	app.set "view engine", "jade"
-	#app.use express.logger()
 	app.use express.cookieParser()
 	app.use express.bodyParser()
 	app.use express.methodOverride()
@@ -41,7 +45,6 @@ app.configure ->
 	app.use passport.initialize()
 	app.use passport.session()
 	app.use app.router
-	app.use express.static(__dirname + "/public")
 
 ## routes
 
@@ -65,8 +68,8 @@ async.series([
 				callback null
 
 	, (callback) -> 
-		# express
-		app.listen settings.defaultport
+		# start express
+		appserver.listen settings.defaultport
 		console.log 'Listening on port ' + settings.defaultport
 		callback null
 
@@ -77,3 +80,16 @@ async.series([
 		console.log err
 		process.exit err
 )
+
+## socket.io
+
+io.sockets.on 'connection', (socket) ->
+  socket.emit 'news', { hello: 'world' }
+
+
+
+
+
+
+
+
