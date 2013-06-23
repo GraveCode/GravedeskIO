@@ -4,6 +4,8 @@ module.exports = {
 		dbServer: 'http://localhost'
 		dbPort: 5984
 		dbName: 'test'
+		dbUser: 'admin'
+		dbPass: 'password'
 		# create up to date couchdb views at every server start
 		overwriteViews: false
 	}

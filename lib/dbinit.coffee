@@ -64,6 +64,9 @@ module.exports = (couchdb, callback) ->
 	c = new(cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
 			cache: true
 			raw: false
+			auth:
+				username: couchdb.dbUser 
+				password: couchdb.dbPass
 		)
 	db = c.database couchdb.dbName
 
