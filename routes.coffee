@@ -21,7 +21,7 @@ module.exports = (app, passport) ->
 	app.get "/node/google/return", passport.authenticate("google",
 		failureRedirect: "/node/google"
 	), (req, res) ->
-		console.log req.user.emails[0].value + " logged in."
+		# console.log req.user.emails[0].value + " logged in."
 		# will always redirect to here first when logged in
 		res.redirect "/"
 	
