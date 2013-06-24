@@ -65,7 +65,7 @@ io.set "authorization", passportSocketIO.authorize(
 
 ## routes
 
-require('./routes')(app, passport)
+require('./routes')(app, passport, settings)
 
 ## start servers
 
@@ -101,9 +101,11 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-  socket.emit 'news', "Hello, " + socket.handshake.user.displayName
   console.log socket.handshake.user.displayName + " has connected."
 
+  socket.on 'getTickets', (group, callback) ->
+  	console.log "getting tickets for " + group
+  	callback {"key": "Your tickets, sir"}
 
 
 
