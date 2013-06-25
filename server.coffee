@@ -105,7 +105,7 @@ io.sockets.on 'connection', (socket) ->
 
   socket.on 'getTickets', (group, callback) ->
   	console.log "getting tickets for " + group
-  	callback {"key": "Your tickets, sir"}
+  	db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
 
 
 

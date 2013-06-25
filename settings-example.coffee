@@ -15,7 +15,13 @@ module.exports = {
 	# client facing url
 	clientURL: 'http://example.com'
 
-	groups: ['support', 'systems', 'longterm']
-	status: ['new', 'underway', 'waiting']
+	clientConfig: 
+		groups: ['support', 'systems', 'longterm']
+		status: ['new', 'underway', 'waiting']
+
+	admins: [
+		"user1@example.com"
+		"user2@example.com"
+	]
 
 }
