@@ -104,8 +104,10 @@ io.sockets.on 'connection', (socket) ->
   console.log socket.handshake.user.displayName + " has connected."
 
   socket.on 'getTickets', (group, callback) ->
-  	console.log "getting tickets for " + group
   	db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
+
+  socket.on 'addTicket', (formdata) ->
+  	console.log formdata
 
 
 
