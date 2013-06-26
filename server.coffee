@@ -52,14 +52,14 @@ io = require('socket.io').listen(appserver)
 io.set 'resource', '/node/socket.io'
 io.set 'log level', 1 # disable debug log
 io.set "authorization", passportSocketIO.authorize(
-  cookieParser: express.cookieParser #or connect.cookieParser
-  key: "express.sid" #the cookie where express (or connect) stores its session id.
-  secret: 'tom thumb' #the session secret to parse the cookie
-  store: sessionStore #the session store that express uses
-  fail: (data, accept) -> # *optional* callbacks on success or fail
-    accept null, false # second param takes boolean on whether or not to allow handshake
-  success: (data, accept) ->
-    accept null, true
+	cookieParser: express.cookieParser #or connect.cookieParser
+	key: "express.sid" #the cookie where express (or connect) stores its session id.
+	secret: 'tom thumb' #the session secret to parse the cookie
+	store: sessionStore #the session store that express uses
+	fail: (data, accept) -> # *optional* callbacks on success or fail
+		accept null, false # second param takes boolean on whether or not to allow handshake
+	success: (data, accept) ->
+		accept null, true
 )
 
 
@@ -101,13 +101,25 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-  console.log socket.handshake.user.displayName + " has connected."
+	user = socket.handshake.user
+	console.log socket.handshake.user.displayName + " has connected."
 
-  socket.on 'getTickets', (group, callback) ->
-  	db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
+	socket.on 'isAdmin', (callback) ->
+		i = settings.admins.indexOf user.emails[0].value
+		if i >= 0
+			callback true
+		else
+			callback false
 
-  socket.on 'addTicket', (formdata) ->
-  	console.log formdata
+	socket.on 'getTickets', (group, callback) ->
+		db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
+
+	socket.on 'addTicket', (formdata, callback) ->
+		console.log formdata
+		callback "error", "Ticket added to database."
+
+
+
 
 
 
