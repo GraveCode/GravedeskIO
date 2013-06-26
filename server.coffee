@@ -115,8 +115,42 @@ io.sockets.on 'connection', (socket) ->
 		db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
 
 	socket.on 'addTicket', (formdata, callback) ->
-		console.log formdata
-		callback "error", "Ticket added to database."
+		timestamp = Date.now()
+		async.waterfall([
+			(cb) -> 
+				console.log timestamp
+				db.save
+					type: 'ticket'
+					created: timestamp
+					modified: timestamp
+					title: formdata.subject
+					status: 0
+					closed: false
+					group: +formdata.team
+					recipients: [formdata.from]
+				, cb
+
+			, (results, cb) ->
+				db.save
+					type: 'message'
+					date: timestamp
+					from: formdata.from
+					to: settings.serverEmail
+					private: false
+					body: formdata.description
+					fromuser: true
+					ticketid: results.id
+				, cb
+		], (err, result) ->
+				if err 
+					msg = 'Unable to save ticket to database! '
+					console.log msg + err
+					callback msg
+				else
+					msg = 'Ticket added to system. '
+					console.log msg + 'MSG id: ' + result.id
+					callback null, msg
+		)
 
 
 
