@@ -111,14 +111,13 @@ io.sockets.on 'connection', (socket) ->
 		else
 			callback false
 
-	socket.on 'getTickets', (group, callback) ->
-		db.view 'tickets/open', { startkey: [group], endkey: [group,{}] } , callback
+	socket.on 'getMyTickets', (user, callback) ->
+		db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , callback
 
 	socket.on 'addTicket', (formdata, callback) ->
 		timestamp = Date.now()
 		async.waterfall([
 			(cb) -> 
-				console.log timestamp
 				db.save
 					type: 'ticket'
 					created: timestamp
