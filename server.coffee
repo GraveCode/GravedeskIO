@@ -112,7 +112,23 @@ io.sockets.on 'connection', (socket) ->
 			callback false
 
 	socket.on 'getMyTickets', (user, callback) ->
-		db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , callback
+		db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
+			if !err
+				open = []
+				closed = []
+				length = results.length
+				element = null
+				i = 0
+				
+				while i < length
+					element = results[i]
+					closed.push element if element.value.closed
+					open.push element unless element.value.closed
+					i++
+
+				callback null, open, closed
+			else
+				callback err
 
 	socket.on 'addTicket', (formdata, callback) ->
 		timestamp = Date.now()
