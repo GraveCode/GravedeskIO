@@ -7,10 +7,10 @@ module.exports = (app, passport, settings) ->
 		res.redirect "/node/google"
 
 	# standard pages
-	app.get "/", (req, res) ->
+	app.get "/node/", (req, res) ->
 		res.send "GravedeskIO is running"
 	
-	app.get "/node/getuser", (req, res) ->
+	app.get "/node/getuser", ensureAuthenticated, (req, res) ->
 		res.send req.user
 	
 	app.get "/node/google", passport.authenticate("google",
