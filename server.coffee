@@ -134,7 +134,7 @@ io.sockets.on 'connection', (socket) ->
 		timestamp = Date.now()
 		async.waterfall([
 			(cb) -> 
-				db.save
+				ticket = 
 					type: 'ticket'
 					created: timestamp
 					modified: timestamp
@@ -143,10 +143,11 @@ io.sockets.on 'connection', (socket) ->
 					closed: false
 					group: +formdata.team
 					recipients: [formdata.from]
-				, cb
+				db.save ticket, (err, results) ->
+					cb err, results, ticket
 
-			, (results, cb) ->
-				db.save
+			, (results, ticket, cb) ->
+				message = 
 					type: 'message'
 					date: timestamp
 					from: formdata.from
@@ -155,15 +156,17 @@ io.sockets.on 'connection', (socket) ->
 					body: formdata.description
 					fromuser: true
 					ticketid: results.id
-				, cb
-		], (err, result) ->
+				db.save message, (err, res) ->
+					cb err, results, ticket
+		], (err, results, ticket) ->
 				if err 
 					msg = 'Unable to save ticket to database! '
 					console.log msg + err
 					callback msg
 				else
 					msg = 'Ticket added to system. '
-					console.log msg + 'MSG id: ' + result.id
+					console.log msg + 'Ticket id: ' + results.id
+					socket.broadcast.emit('ticketAdded', results.id, ticket)
 					callback null, msg
 		)
 
