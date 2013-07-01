@@ -2,6 +2,7 @@
 
 settings = require './settings'
 dbinit = require './lib/dbinit'
+SocketHandler = require './lib/sockethandler'
 express = require 'express'
 async = require 'async'
 path = require 'path'
@@ -101,74 +102,10 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-	user = socket.handshake.user
+
 	console.log socket.handshake.user.displayName + " has connected."
+	sockethandler = new SocketHandler(socket, db, settings)
 
-	socket.on 'isAdmin', (callback) ->
-		i = settings.admins.indexOf user.emails[0].value
-		if i >= 0
-			callback true
-		else
-			callback false
-
-	socket.on 'getMyTickets', (user, callback) ->
-		db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
-			if !err
-				open = []
-				closed = []
-				length = results.length
-				element = null
-				i = 0
-				
-				while i < length
-					element = results[i]
-					closed.push element if element.value.closed
-					open.push element unless element.value.closed
-					i++
-
-				callback null, open, closed
-			else
-				callback err
-
-	socket.on 'addTicket', (formdata, callback) ->
-		timestamp = Date.now()
-		async.waterfall([
-			(cb) -> 
-				ticket = 
-					type: 'ticket'
-					created: timestamp
-					modified: timestamp
-					title: formdata.subject
-					status: 0
-					closed: false
-					group: +formdata.team
-					recipients: [formdata.from]
-				db.save ticket, (err, results) ->
-					cb err, results, ticket
-
-			, (results, ticket, cb) ->
-				message = 
-					type: 'message'
-					date: timestamp
-					from: formdata.from
-					to: settings.serverEmail
-					private: false
-					body: formdata.description
-					fromuser: true
-					ticketid: results.id
-				db.save message, (err, res) ->
-					cb err, results, ticket
-		], (err, results, ticket) ->
-				if err 
-					msg = 'Unable to save ticket to database! '
-					console.log msg + err
-					callback msg
-				else
-					msg = 'Ticket added to system. '
-					console.log msg + 'Ticket id: ' + results.id
-					socket.broadcast.emit('ticketAdded', results.id, ticket)
-					callback null, msg
-		)
 
 
 
