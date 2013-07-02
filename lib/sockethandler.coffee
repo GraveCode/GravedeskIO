@@ -7,15 +7,18 @@ class SocketHandler extends EventEmitter
 		@user = @socket.handshake.user
 		@socket.on 'isAdmin', (callback) => @isAdmin callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
+		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 
 	isAdmin: (callback) ->
-		if @settings.admins.indexOf @user.emails[0].value >= 0
+		i = @settings.admins.indexOf @user.emails[0].value
+		if i >= 0
 			callback true
 		else
 			callback false
 
 	getMyTickets: (user, callback) ->
+
 		@db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
 			if !err
 				# split tickets into open and closed tickets
@@ -27,12 +30,63 @@ class SocketHandler extends EventEmitter
 	
 				while i < length
 					element = results[i]
-					closed.push element if element.value.closed
-					open.push element unless element.value.closed
+					closed.push element.value if element.value.closed
+					open.push element.value unless element.value.closed
 					i++
+
 				callback null, open, closed
 			else
 				callback err
+
+	getMessages: (id, callback) ->
+		self = @
+		unwrapObject = (item) ->
+			return item
+
+		if id
+			async.waterfall([
+				(cb) ->
+					self.db.get id, cb
+
+				, (ticket, cb) ->
+					# check allowed access
+					self.isAdmin (isAdmin) ->
+						cb null, isAdmin, ticket
+
+				, (isAdmin, ticket, cb) ->
+					# check if user is an owner of the ticket
+					i = ticket.recipients.indexOf self.user.emails[0].value
+
+					# if admin, show all messages
+					if isAdmin
+						self.db.view 'messages/all', { startkey: [id], endkey: [id, {}] }, (err, messages) ->
+							cb err, ticket, messages
+
+					# if owner of ticket only get public messages
+					else if i >= 0
+						self.db.view 'messages/public', {startkey: [id], endkey: [id, {}] }, (err, messages) ->
+							cb err, ticket, messages
+
+					# else access denied		
+					else 
+						cb "Denied access"
+
+			, (ticket, messages, cb) ->
+				# clean messages cruft
+				cleanMessages = messages.map unwrapObject
+				cb null, ticket, cleanMessages
+
+			], (err, ticket, messages) ->
+				if err
+					callback "Unable to retrieve ticket by that ID: " + id
+				else
+					callback null, ticket, messages
+			)
+
+		else 
+			callback "Error accessing ticket, invalid ID"
+		
+
 
 	addTicket: (formdata, callback) ->
 		timestamp = Date.now()
@@ -74,5 +128,6 @@ class SocketHandler extends EventEmitter
 					self.socket.broadcast.emit('ticketAdded', results.id, ticket)
 					callback null, msg
 		)
+		 	
 
 module.exports = SocketHandler

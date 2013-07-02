@@ -102,8 +102,6 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-
-	console.log socket.handshake.user.displayName + " has connected."
 	sockethandler = new SocketHandler(socket, db, settings)
 
 

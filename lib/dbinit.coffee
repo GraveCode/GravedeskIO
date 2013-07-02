@@ -27,7 +27,8 @@ addViews = (db, cb) ->
 			# order must match that of designs array
 			newdesigns = [
 				# ticket views
-				{	open:
+				{	
+					open:
 						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], doc);}}"
 
 					closed:
@@ -41,8 +42,13 @@ addViews = (db, cb) ->
 						reduce: "_count"
 				}
 				# message views
-				, { all:
-						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.created], doc);}}"
+				, { 
+					all:
+						map: "function(doc) {if (doc.type === 'message') {emit([doc.ticketid, doc.date], doc);}}"
+					
+					public:
+						map: "function(doc) {if (doc.type === 'message' && !doc.private) {emit([doc.ticketid, doc.date], doc);}}" 	
+
 				}
 				# autoreply views
 				, { all:
