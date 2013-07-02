@@ -85,8 +85,6 @@ class SocketHandler extends EventEmitter
 
 		else 
 			callback "Error accessing ticket, invalid ID"
-		
-
 
 	addTicket: (formdata, callback) ->
 		timestamp = Date.now()
@@ -117,6 +115,7 @@ class SocketHandler extends EventEmitter
 					ticketid: results.id
 				self.db.save message, (err, res) ->
 					cb err, results, ticket
+					
 		], (err, results, ticket) ->
 				if err 
 					msg = 'Unable to save ticket to database! '
