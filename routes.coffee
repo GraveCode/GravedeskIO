@@ -33,7 +33,7 @@ module.exports = (app, passport, settings) ->
 	
 	app.get "/node/logout", (req, res) ->
 		req.logout()
-		res.redirect "/"
+		res.redirect "/loggedout/"
 
 	app.get "/node/settings", ensureAuthenticated, (req, res) ->
 		res.send settings.clientConfig
