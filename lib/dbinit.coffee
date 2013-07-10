@@ -34,7 +34,7 @@ addViews = (db, cb) ->
 					closed:
 						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit(doc.modified, doc);}}"
 
-					mine:
+					byuser:
 						map: "function(doc) {if (doc.type === 'ticket') {emit([doc.recipients,doc.modified], doc);}}"
 
 					count:

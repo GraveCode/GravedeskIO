@@ -1,6 +1,8 @@
 # required modules
 {EventEmitter} = require "events" 
 async = require "async"
+marked = require "marked"
+sanitizer = require "sanitizer"
 
 class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @settings) ->
@@ -19,7 +21,7 @@ class SocketHandler extends EventEmitter
 
 	getMyTickets: (user, callback) ->
 
-		@db.view 'tickets/mine', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
+		@db.view 'tickets/byuser', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
 			if !err
 				# split tickets into open and closed tickets
 				open = []
@@ -86,31 +88,41 @@ class SocketHandler extends EventEmitter
 		else 
 			callback "Error accessing ticket, invalid ID"
 
-	addTicket: (formdata, callback) ->
+	addTicket: (data, callback) ->
 		timestamp = Date.now()
 		self = @
+		nameObj = {}
+		if data?.name
+			nameObj[data.email] = data.name
+
 		async.waterfall([
 			(cb) -> 
 				ticket = 
 					type: 'ticket'
 					created: timestamp
 					modified: timestamp
-					title: formdata.subject
+					title: data.subject
 					status: 0
 					closed: false
-					group: +formdata.team
-					recipients: [formdata.from]
+					group: +data.team
+					recipients: [data.email]
+					names: nameObj
+
 				self.db.save ticket, (err, results) ->
 					cb err, results, ticket
 
 			, (results, ticket, cb) ->
+				nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
+				clean = self.stripHTML data.description
 				message = 
 					type: 'message'
 					date: timestamp
-					from: formdata.from
-					to: self.settings.serverEmail
+					from: data.email
+					recipients: [self.settings.serverEmail.email]
+					names: nameObj
 					private: false
-					body: formdata.description
+					text: clean
+					html: marked(clean)
 					fromuser: true
 					ticketid: results.id
 				self.db.save message, (err, res) ->
@@ -127,6 +139,18 @@ class SocketHandler extends EventEmitter
 					self.socket.broadcast.emit('ticketAdded', results.id, ticket)
 					callback null, msg
 		)
-		 	
+
+
+	stripHTML: (html) -> 
+		clean = sanitizer.sanitize html, (str) ->
+			return str
+
+		# Remove all remaining HTML tags.
+		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
+
+		# Return the final string, minus any leading/trailing whitespace.
+		return clean.trim()
+
+			
 
 module.exports = SocketHandler

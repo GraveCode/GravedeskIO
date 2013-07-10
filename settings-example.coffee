@@ -15,13 +15,13 @@ module.exports = {
 	# client facing url
 	clientURL: 'http://example.com'
 
-	clientConfig: 
-		groups: ['support', 'systems', 'longterm']
-		status: ['new', 'underway', 'waiting']
-
 	admins: [
 		"user1@example.com"
 		"user2@example.com"
 	]
+
+	serverEmail: 
+		email: "gravedesk@example.com"
+		name: "Gravedesk Support"
 
 }
