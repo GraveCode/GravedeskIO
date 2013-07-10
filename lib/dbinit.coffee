@@ -52,7 +52,7 @@ addViews = (db, cb) ->
 				}
 				# autoreply views
 				, { all:
-						map: "function(doc) {if (doc.type === 'autoreply') {emit([doc.ticketid, doc.created], doc);}}"						
+						map: "function(doc) {if (doc.type === 'autoreply') {emit([doc.ticketid, doc.date], doc);}}"						
 				}
 			]
 
