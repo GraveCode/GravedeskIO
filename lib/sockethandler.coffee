@@ -11,6 +11,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
+		@socket.on 'addMessage', (message, callback) => @addMessage message, callback
 
 	isAdmin: (callback) ->
 		i = @settings.admins.indexOf @user.emails[0].value
@@ -113,7 +114,7 @@ class SocketHandler extends EventEmitter
 
 			, (results, ticket, cb) ->
 				nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
-				clean = self.stripHTML data.description
+				clean = self.stripHTML data.description or ""
 				message = 
 					type: 'message'
 					date: timestamp
@@ -139,6 +140,19 @@ class SocketHandler extends EventEmitter
 					self.socket.broadcast.emit('ticketAdded', results.id, ticket)
 					callback null, msg
 		)
+
+	addMessage: (message, callback) ->
+		self = @
+		clean = self.stripHTML message.text
+		message.text = clean
+		message.html = marked(clean)
+		self.db.save message, (err, res) ->
+			if err
+				callback err
+			else
+				console.log 'Message added, id: ' + res.id
+				self.socket.broadcast.emit('messageAdded', message.ticketid, message)
+				callback null, message
 
 
 	stripHTML: (html) -> 
