@@ -146,13 +146,39 @@ class SocketHandler extends EventEmitter
 		clean = self.stripHTML message.text
 		message.text = clean
 		message.html = marked(clean)
-		self.db.save message, (err, res) ->
+		async.waterfall([
+			(cb) ->
+				# save message to db
+				self.db.save message, cb
+			(results, cb) ->
+				console.log 'Message added, id: ' + results.id
+				self.socket.broadcast.emit('messageAdded', message.ticketid, message)
+				# load related ticket
+				self.db.get message.ticketid, cb
+			(ticket, cb) ->
+				# update date and status of ticket
+				timestamp = Date.now()
+				ticket.modified = timestamp
+				if message.fromuser
+					ticket.status = 0
+				else if message.private
+					ticket.status = 1
+				else 
+					ticket.status = 2
+				self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
+					if err
+						cb err
+					else
+						cb null, ticket
+
+		], (err, ticket) ->
 			if err
 				callback err
 			else
-				console.log 'Message added, id: ' + res.id
-				self.socket.broadcast.emit('messageAdded', message.ticketid, message)
-				callback null, message
+				console.log 'Ticket ' + ticket._id + ' updated.'
+				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
+				callback null, message, ticket
+		)
 
 
 	stripHTML: (html) -> 
