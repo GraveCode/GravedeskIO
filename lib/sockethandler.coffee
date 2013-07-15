@@ -143,9 +143,13 @@ class SocketHandler extends EventEmitter
 
 	addMessage: (message, callback) ->
 		self = @
+		timestamp = Date.now()
 		clean = self.stripHTML message.text
 		message.text = clean
 		message.html = marked(clean)
+		message.type = 'message'
+		message.date = timestamp
+		
 		async.waterfall([
 			(cb) ->
 				# save message to db
@@ -157,7 +161,6 @@ class SocketHandler extends EventEmitter
 				self.db.get message.ticketid, cb
 			(ticket, cb) ->
 				# update date and status of ticket
-				timestamp = Date.now()
 				ticket.modified = timestamp
 				if message.fromuser
 					ticket.status = 0
