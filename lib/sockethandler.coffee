@@ -4,6 +4,13 @@ async = require "async"
 marked = require "marked"
 sanitizer = require "sanitizer"
 
+marked.setOptions(
+	gfm: true
+	breaks: true
+	smartypants: true
+	sanitize: true
+)
+
 class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @settings) ->
 		@user = @socket.handshake.user
@@ -185,14 +192,13 @@ class SocketHandler extends EventEmitter
 
 
 	stripHTML: (html) -> 
-		clean = sanitizer.sanitize html, (str) ->
-			return str
+		clean = sanitizer.sanitize html
 
 		# Remove all remaining HTML tags.
 		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
 
 		# Return the final string, minus any leading/trailing whitespace.
-		return clean.trim()
+		#return clean.trim()
 
 			
 
