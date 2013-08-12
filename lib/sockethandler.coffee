@@ -3,6 +3,7 @@
 async = require "async"
 marked = require "marked"
 sanitizer = require "sanitizer"
+{toMarkdown} = require "to-markdown"
 
 marked.setOptions(
 	gfm: true
@@ -121,7 +122,7 @@ class SocketHandler extends EventEmitter
 
 			, (results, ticket, cb) ->
 				nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
-				clean = self.stripHTML data.description or ""
+				clean = self.cleanHTML data.description or ""
 				message = 
 					type: 'message'
 					date: timestamp
@@ -151,7 +152,7 @@ class SocketHandler extends EventEmitter
 	addMessage: (message, callback) ->
 		self = @
 		timestamp = Date.now()
-		clean = self.stripHTML message.text
+		clean = self.cleanHTML message.text
 		message.text = clean
 		message.html = marked(clean)
 		message.type = 'message'
@@ -191,14 +192,15 @@ class SocketHandler extends EventEmitter
 		)
 
 
-	stripHTML: (html) -> 
+	cleanHTML: (html) -> 
+		# remove unsafe tags
 		clean = sanitizer.sanitize html
-
+		# convert safe tags to markdown
+		clean = toMarkdown clean
 		# Remove all remaining HTML tags.
 		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
 
-		# Return the final string, minus any leading/trailing whitespace.
-		#return clean.trim()
+		return clean
 
 			
 
