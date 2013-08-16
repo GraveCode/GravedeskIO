@@ -20,6 +20,8 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 		@socket.on 'addMessage', (message, callback) => @addMessage message, callback
+		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
+		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
 
 	isAdmin: (callback) ->
 		i = @settings.admins.indexOf @user.emails[0].value
@@ -187,10 +189,34 @@ class SocketHandler extends EventEmitter
 				callback err
 			else
 				console.log 'Ticket ' + ticket._id + ' updated.'
+				ticket._rev = res.rev
 				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
 				callback null, message, ticket
 		)
 
+	updateTicket: (ticket, callback) ->
+		self = @
+		ticket.modified = Date.now()
+		self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
+			if err
+				console.log 'Unable to save ticket ' + ticket._id
+				console.log err
+				callback err, null
+			else
+				console.log 'Ticket ' + ticket._id + ' updated.'
+				ticket._rev = res.rev
+				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
+				callback null
+
+	deleteTicket: (ticket, callback) ->
+		self = @
+		self.db.remove ticket.id, ticket.rev, (err, res) ->
+			if err
+				callback err
+			else
+				console.log 'Ticket ' + res.id + ' deleted.'
+				self.socket.broadcast.emit('ticketDeleted', res.id)
+				callback null
 
 	cleanHTML: (html) -> 
 		# remove unsafe tags
