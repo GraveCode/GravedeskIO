@@ -182,41 +182,50 @@ class SocketHandler extends EventEmitter
 					if err
 						cb err
 					else
-						cb null, ticket
+						cb null, ticket, res
 
-		], (err, ticket) ->
+		], (err, ticket, result) ->
 			if err
-				callback err
+					console.log 'Unable to update ticket ' + ticket._id
+					console.log err
+					callback err
 			else
 				console.log 'Ticket ' + ticket._id + ' updated.'
-				ticket._rev = res.rev
+				ticket._rev = result.rev
 				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
 				callback null, message, ticket
 		)
 
 	updateTicket: (ticket, callback) ->
 		self = @
-		ticket.modified = Date.now()
-		self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
-			if err
-				console.log 'Unable to save ticket ' + ticket._id
-				console.log err
-				callback err, null
-			else
-				console.log 'Ticket ' + ticket._id + ' updated.'
-				ticket._rev = res.rev
-				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
-				callback null
+		if self.isAdmin
+			ticket.modified = Date.now()
+			self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
+				if err
+					console.log 'Unable to save ticket ' + ticket._id
+					console.log err
+					callback err, null
+				else
+					console.log 'Ticket ' + ticket._id + ' updated.'
+					ticket._rev = res.rev
+					self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
+					callback null
+		else callback "Not authorized to update ticket!"
 
 	deleteTicket: (ticket, callback) ->
 		self = @
-		self.db.remove ticket.id, ticket.rev, (err, res) ->
-			if err
-				callback err
-			else
-				console.log 'Ticket ' + res.id + ' deleted.'
-				self.socket.broadcast.emit('ticketDeleted', res.id)
-				callback null
+		if self.isAdmin
+			self.db.remove ticket.id, ticket.rev, (err, res) ->
+				if err
+					console.log 'Unable to delete ticket ' + ticket.id
+					console.log err
+					callback err
+				else
+					console.log 'Ticket ' + res.id + ' deleted.'
+					self.socket.broadcast.emit('ticketDeleted', res.id)
+					callback null
+		else
+			callback "Not authorized to delete ticket!"
 
 	cleanHTML: (html) -> 
 		# remove unsafe tags
