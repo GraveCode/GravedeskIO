@@ -4,7 +4,7 @@ module.exports = (app, passport, settings) ->
 
 	ensureAuthenticated = (req, res, next) ->
 		return next()  if req.isAuthenticated()
-		res.redirect "/node/google"
+		res.redirect "/login/"
 
 	# standard pages
 	app.get "/node/", (req, res) ->
@@ -12,14 +12,11 @@ module.exports = (app, passport, settings) ->
 	
 	app.get "/node/getuser", ensureAuthenticated, (req, res) ->
 		res.send req.user
-	
-	app.get "/node/google", passport.authenticate("google",
-		failureRedirect: "/node/google"
-	), (req, res) ->
-		res.redirect "/"
-	
+
+	app.get "/node/google", passport.authenticate("google")
+
 	app.get "/node/google/return", passport.authenticate("google",
-		failureRedirect: "/node/google"
+		failureRedirect: "/login/"
 	), (req, res) ->
 		# test if admin user
 		user = req.user.emails[0].value
