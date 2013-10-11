@@ -91,7 +91,7 @@ class SocketHandler extends EventEmitter
 
 			], (err, ticket, messages) ->
 				if err
-					callback "Unable to retrieve ticket by that ID: " + id
+					callback "Unable to find ticket with that ID: " + id
 				else
 					callback null, ticket, messages
 			)
@@ -208,8 +208,8 @@ class SocketHandler extends EventEmitter
 				else
 					console.log 'Ticket ' + ticket._id + ' updated.'
 					ticket._rev = res.rev
-					self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
-					callback null
+					self.socket.broadcast.emit 'ticketUpdated', ticket._id, ticket
+					callback null, ticket
 		else callback "Not authorized to update ticket!"
 
 	deleteTicket: (ticket, callback) ->
