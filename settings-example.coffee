@@ -1,7 +1,7 @@
 module.exports = {
 	# couch db settings
 	couchdb: {
-		dbServer: 'http://localhost'
+		dbServer: 'localhost'
 		dbPort: 5984
 		dbName: 'test'
 		dbUser: 'admin'
@@ -14,6 +14,8 @@ module.exports = {
 	defaultport: 3000
 	# client facing url
 	clientURL: 'http://example.com'
+	clientID: 'google-client-id'
+	clientSecret: 'google-client-secret'
 
 	admins: [
 		"user1@example.com"

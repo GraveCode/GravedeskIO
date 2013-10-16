@@ -11,6 +11,8 @@ passport = require 'passport'
 passportSocketIO = require 'passport.socketio'
 GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 
+RedisStore = require('connect-redis')(express)
+
 db = null
 app = express()
 
@@ -33,14 +35,15 @@ passport.use new GoogleStrategy(
     done null, profile
 )
 
-MemoryStore = express.session.MemoryStore
-sessionStore = new MemoryStore()
+sessionStore = new RedisStore
+
+app.enable 'trust proxy'
 
 app.configure ->
 	app.use express.cookieParser()
 	app.use express.bodyParser()
 	app.use express.methodOverride()
-	app.use express.session(store: sessionStore, secret: 'tom thumb', key: 'express.sid')
+	app.use express.session(store: sessionStore, secret: 'tom thumb')
 	app.use passport.initialize()
 	app.use passport.session()
 	app.use app.router
@@ -54,7 +57,6 @@ io.set 'resource', '/node/socket.io'
 io.set 'log level', 1 # disable debug log
 io.set "authorization", passportSocketIO.authorize(
 	cookieParser: express.cookieParser #or connect.cookieParser
-	key: "express.sid" #the cookie where express (or connect) stores its session id.
 	secret: 'tom thumb' #the session secret to parse the cookie
 	store: sessionStore #the session store that express uses
 	fail: (data, accept) -> # *optional* callbacks on success or fail
@@ -103,15 +105,4 @@ async.series([
 
 io.sockets.on 'connection', (socket) ->
 	sockethandler = new SocketHandler(socket, db, settings)
-
-
-
-
-
-
-
-
-
-
-
 
