@@ -10,7 +10,7 @@
 		"express": "3.2.x",
 		"cradle": "0.6.x",
 		"passport": "0.1.x",
-		"passport-google": "0.3.x",
+		"passport-google-oauth": "0.1.x",
 		"socket.io": "0.9.x",
 		"passport.socketio": "1.2.x",
 		"marked": "0.2.x",
