@@ -9,7 +9,7 @@ path = require 'path'
 
 passport = require 'passport'
 passportSocketIO = require 'passport.socketio'
-GoogleStrategy = require('passport-google').Strategy
+GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 
 db = null
 app = express()
@@ -23,14 +23,14 @@ passport.serializeUser (user, done) ->
 passport.deserializeUser (obj, done) ->
 	done null, obj
 
- 
 passport.use new GoogleStrategy(
-	returnURL: settings.clientURL + "/node/google/return"
-	realm: settings.clientURL
-, (identifier, profile, done) ->
-	process.nextTick ->
-		profile.identifier = identifier
-		done null, profile
+  clientID: settings.clientID
+  clientSecret: settings.clientSecret
+  callbackURL: settings.clientURL + "/node/google/return"
+, (accessToken, refreshToken, profile, done) -> 
+  # asynchronous verification, for effect...
+  process.nextTick ->
+    done null, profile
 )
 
 MemoryStore = express.session.MemoryStore
