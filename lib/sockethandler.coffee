@@ -146,7 +146,6 @@ class SocketHandler extends EventEmitter
 					callback msg
 				else
 					msg = 'Ticket added to system. '
-					console.log msg + 'Ticket id: ' + results.id
 					self.socket.broadcast.emit('ticketAdded', results.id, ticket)
 					callback null, msg
 		)
@@ -165,7 +164,6 @@ class SocketHandler extends EventEmitter
 				# save message to db
 				self.db.save message, cb
 			(results, cb) ->
-				console.log 'Message added, id: ' + results.id
 				self.socket.broadcast.emit('messageAdded', message.ticketid, message)
 				# load related ticket
 				self.db.get message.ticketid, cb
@@ -190,7 +188,6 @@ class SocketHandler extends EventEmitter
 					console.log err
 					callback err
 			else
-				console.log 'Ticket ' + ticket._id + ' updated.'
 				ticket._rev = result.rev
 				self.socket.broadcast.emit('ticketUpdated', ticket._id, ticket)
 				callback null, message, ticket
@@ -206,7 +203,6 @@ class SocketHandler extends EventEmitter
 					console.log err
 					callback err, null
 				else
-					console.log 'Ticket ' + ticket._id + ' updated.'
 					ticket._rev = res.rev
 					self.socket.broadcast.emit 'ticketUpdated', ticket._id, ticket
 					callback null, ticket
@@ -221,7 +217,6 @@ class SocketHandler extends EventEmitter
 					console.log err
 					callback err
 				else
-					console.log 'Ticket ' + res.id + ' deleted.'
 					self.socket.broadcast.emit('ticketDeleted', res.id)
 					callback null
 		else
