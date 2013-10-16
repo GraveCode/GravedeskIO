@@ -35,7 +35,7 @@ module.exports = (app, passport, settings) ->
 	
 	app.get "/node/logout", (req, res) ->
 		req.logout()
-		res.redirect "/loggedout/"
+		res.redirect "https://accounts.google.com/Logout"
 
 	app.get "/node/settings", ensureAuthenticated, (req, res) ->
 		res.send settings.clientConfig
