@@ -17,6 +17,7 @@ class SocketHandler extends EventEmitter
 		@user = @socket.handshake.user
 		@socket.on 'isAdmin', (callback) => @isAdmin callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
+		@socket.on 'getTickets', (group, callback) => @getTickets group, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 		@socket.on 'addMessage', (message, callback) => @addMessage message, callback
@@ -33,7 +34,9 @@ class SocketHandler extends EventEmitter
 	getMyTickets: (user, callback) ->
 
 		@db.view 'tickets/byuser', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
-			if !err
+			if err
+				callback err
+			else
 				# split tickets into open and closed tickets
 				open = []
 				closed = []
@@ -48,8 +51,21 @@ class SocketHandler extends EventEmitter
 					i++
 
 				callback null, open, closed
-			else
+
+
+	getTickets: (group, callback) ->
+		unwrapObject = (item) ->
+			return item
+
+		# add admin check here!
+		@db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , (err, results) ->
+			if err
 				callback err
+			else
+				# strip id/key headers
+				cleanTickets = results.map unwrapObject
+				callback null, cleanTickets
+
 
 	getMessages: (id, callback) ->
 		self = @
