@@ -57,7 +57,6 @@ class SocketHandler extends EventEmitter
 		unwrapObject = (item) ->
 			return item
 		if @isAdmin
-			# add admin check here!
 			@db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , (err, results) ->
 				if err
 					callback err
