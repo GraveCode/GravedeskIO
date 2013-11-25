@@ -17,7 +17,7 @@ class SocketHandler extends EventEmitter
 		@user = @socket.handshake.user
 		@socket.on 'isAdmin', (callback) => @isAdmin callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
-		@socket.on 'getTickets', (group, callback) => @getTickets group, callback
+		@socket.on 'getOpenTickets', (group, callback) => @getOpenTickets group, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 		@socket.on 'addMessage', (message, callback) => @addMessage message, callback
@@ -53,18 +53,20 @@ class SocketHandler extends EventEmitter
 				callback null, open, closed
 
 
-	getTickets: (group, callback) ->
+	getOpenTickets: (group, callback) ->
 		unwrapObject = (item) ->
 			return item
-
-		# add admin check here!
-		@db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , (err, results) ->
-			if err
-				callback err
-			else
-				# strip id/key headers
-				cleanTickets = results.map unwrapObject
-				callback null, cleanTickets
+		if @isAdmin
+			# add admin check here!
+			@db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , (err, results) ->
+				if err
+					callback err
+				else
+					# strip id/key headers
+					cleanTickets = results.map unwrapObject
+					callback null, cleanTickets
+		else
+			callback "Not authorized to retrieve all tickets!"
 
 
 	getMessages: (id, callback) ->
