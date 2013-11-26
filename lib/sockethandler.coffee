@@ -117,6 +117,7 @@ class SocketHandler extends EventEmitter
 			callback "Error accessing ticket, invalid ID"
 
 	addTicket: (data, callback) ->
+		# make sure timestamp is in the past
 		timestamp = Date.now()
 		self = @
 		nameObj = {}
@@ -169,7 +170,8 @@ class SocketHandler extends EventEmitter
 
 	addMessage: (message, callback) ->
 		self = @
-		timestamp = Date.now()
+		# make sure timestamp is in the past! 
+		timestamp = Date.now() - 1000
 		clean = self.cleanHTML message.text
 		message.text = clean
 		message.html = marked(clean)
@@ -212,8 +214,10 @@ class SocketHandler extends EventEmitter
 
 	updateTicket: (ticket, callback) ->
 		self = @
+		# make sure timestamp is in the past!
+		timestamp = Date.now() - 1000
 		if self.isAdmin
-			ticket.modified = Date.now()
+			ticket.modified = timestamp
 			self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
 				if err
 					console.log 'Unable to save ticket ' + ticket._id
