@@ -65,7 +65,7 @@ class SocketHandler extends EventEmitter
 					cb null if isAdmin
 
 			, (cb) ->
-				self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , cb
+				self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
 
 			], (err, results) ->
 				if err
