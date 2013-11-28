@@ -151,7 +151,6 @@ class SocketHandler extends EventEmitter
 					type: 'message'
 					date: timestamp
 					from: data.email
-					recipients: [self.settings.serverEmail.email]
 					private: false
 					text: clean
 					html: marked(clean)
