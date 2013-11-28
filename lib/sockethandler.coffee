@@ -20,7 +20,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getOpenTickets', (group, callback) => @getOpenTickets group, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
-		@socket.on 'addMessage', (message, callback) => @addMessage message, callback
+		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
 
@@ -118,11 +118,13 @@ class SocketHandler extends EventEmitter
 
 	addTicket: (data, callback) ->
 		# make sure timestamp is in the past
-		timestamp = Date.now()
+		timestamp = Date.now() - 1000
 		self = @
 		nameObj = {}
 		if data?.name
 			nameObj[data.email] = data.name
+		# Add proper name for server user
+		nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
 
 		async.waterfall([
 			(cb) -> 
@@ -136,24 +138,27 @@ class SocketHandler extends EventEmitter
 					group: +data.team
 					recipients: [data.email]
 					names: nameObj
+					priority: +data.priority
 
+				# add ticket to db
 				self.db.save ticket, (err, results) ->
 					cb err, results, ticket
 
 			, (results, ticket, cb) ->
-				nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
+
 				clean = self.cleanHTML data.description or ""
 				message = 
 					type: 'message'
 					date: timestamp
 					from: data.email
 					recipients: [self.settings.serverEmail.email]
-					names: nameObj
 					private: false
 					text: clean
 					html: marked(clean)
 					fromuser: true
 					ticketid: results.id
+
+				# add first message to db	
 				self.db.save message, (err, res) ->
 					cb err, results, ticket
 					
@@ -168,7 +173,7 @@ class SocketHandler extends EventEmitter
 					callback null, msg
 		)
 
-	addMessage: (message, callback) ->
+	addMessage: (message, names, callback) ->
 		self = @
 		# make sure timestamp is in the past! 
 		timestamp = Date.now() - 1000
@@ -177,7 +182,7 @@ class SocketHandler extends EventEmitter
 		message.html = marked(clean)
 		message.type = 'message'
 		message.date = timestamp
-		
+
 		async.waterfall([
 			(cb) ->
 				# save message to db
@@ -187,7 +192,9 @@ class SocketHandler extends EventEmitter
 				# load related ticket
 				self.db.get message.ticketid, cb
 			(ticket, cb) ->
-				# update date and status of ticket
+				# update date, status and names of ticket
+				for k,v of names
+  				ticket.names[k] = v
 				ticket.modified = timestamp
 				if message.fromuser
 					ticket.status = 0
@@ -230,6 +237,8 @@ class SocketHandler extends EventEmitter
 		else callback "Not authorized to update ticket!"
 
 	deleteTicket: (ticket, callback) ->
+		# TODO: also delete associated messages!
+
 		self = @
 		if self.isAdmin
 			self.db.remove ticket.id, ticket.rev, (err, res) ->
