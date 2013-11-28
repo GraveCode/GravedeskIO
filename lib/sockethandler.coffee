@@ -54,18 +54,28 @@ class SocketHandler extends EventEmitter
 
 
 	getOpenTickets: (group, callback) ->
+		self = @
 		unwrapObject = (item) ->
 			return item
-		if @isAdmin
-			@db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , (err, results) ->
+
+		async.waterfall([
+			(cb) ->
+				self.isAdmin (isAdmin) ->
+					cb "Not authorized to retrieve all tickets!" unless isAdmin
+					cb null if isAdmin
+
+			, (cb) ->
+				self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{}] } , cb
+
+			], (err, results) ->
 				if err
 					callback err
 				else
 					# strip id/key headers
 					cleanTickets = results.map unwrapObject
 					callback null, cleanTickets
-		else
-			callback "Not authorized to retrieve all tickets!"
+			)
+
 
 
 	getMessages: (id, callback) ->
