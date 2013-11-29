@@ -32,7 +32,7 @@ addViews = (db, cb) ->
 						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.priority, doc.modified], doc);}}"
 
 					closed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit(doc.modified, doc);}}"
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], doc);}}"
 
 					byuser:
 						map: "function(doc) {if (doc.type === 'ticket') {emit([doc.recipients,doc.modified], doc);}}"

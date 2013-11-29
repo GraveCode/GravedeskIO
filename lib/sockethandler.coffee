@@ -17,7 +17,7 @@ class SocketHandler extends EventEmitter
 		@user = @socket.handshake.user
 		@socket.on 'isAdmin', (callback) => @isAdminCB callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
-		@socket.on 'getOpenTickets', (group, callback) => @getOpenTickets group, callback
+		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
@@ -56,7 +56,7 @@ class SocketHandler extends EventEmitter
 				callback null, open, closed
 
 
-	getOpenTickets: (group, callback) ->
+	getAllTickets: (group, type, callback) ->
 		self = @
 		unwrapObject = (item) ->
 			return item
@@ -70,7 +70,12 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-				self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
+				if type == "open"
+					self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
+				else if type == "closed"
+					self.db.view 'tickets/closed', { descending: true, endkey: [group], startkey: [group,{}] } , cb
+				else
+					cb "Unknown ticket type"
 
 			], (err, results) ->
 				if err
