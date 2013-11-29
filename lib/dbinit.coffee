@@ -49,6 +49,9 @@ addViews = (db, cb) ->
 					public:
 						map: "function(doc) {if (doc.type === 'message' && !doc.private) {emit([doc.ticketid, doc.date], doc);}}" 	
 
+					ids:
+						map: "function(doc) {if (doc.type === 'message') {emit(doc.ticketid, {id: doc._id, rev: doc._rev});}}"	
+
 				}
 				# autoreply views
 				, { all:

@@ -15,7 +15,7 @@ marked.setOptions(
 class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @settings) ->
 		@user = @socket.handshake.user
-		@socket.on 'isAdmin', (callback) => @isAdmin callback
+		@socket.on 'isAdmin', (callback) => @isAdminCB callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getOpenTickets', (group, callback) => @getOpenTickets group, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
@@ -24,12 +24,15 @@ class SocketHandler extends EventEmitter
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
 
-	isAdmin: (callback) ->
-		i = @settings.admins.indexOf @user.emails[0].value
+	isAdmin: ->
+		i = @settings.admins.indexOf @user?.emails[0]?.value
 		if i >= 0
-			callback true
+			return true
 		else
-			callback false
+			return false	
+
+	isAdminCB: (callback) ->
+		callback null, @isAdmin()
 
 	getMyTickets: (user, callback) ->
 
@@ -60,9 +63,11 @@ class SocketHandler extends EventEmitter
 
 		async.waterfall([
 			(cb) ->
-				self.isAdmin (isAdmin) ->
-					cb "Not authorized to retrieve all tickets!" unless isAdmin
-					cb null if isAdmin
+				# authentication check
+				if self.isAdmin()
+					cb null
+				else
+					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
 				self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
@@ -89,16 +94,11 @@ class SocketHandler extends EventEmitter
 					self.db.get id, cb
 
 				, (ticket, cb) ->
-					# check allowed access
-					self.isAdmin (isAdmin) ->
-						cb null, isAdmin, ticket
-
-				, (isAdmin, ticket, cb) ->
 					# check if user is an owner of the ticket
 					i = ticket.recipients.indexOf self.user.emails[0].value
 
 					# if admin, show all messages
-					if isAdmin
+					if self.isAdmin()
 						self.db.view 'messages/all', { startkey: [id], endkey: [id, {}] }, (err, messages) ->
 							cb err, ticket, messages
 
@@ -109,7 +109,7 @@ class SocketHandler extends EventEmitter
 
 					# else access denied		
 					else 
-						cb "Denied access"
+						cb "Denied Access"
 
 			, (ticket, messages, cb) ->
 				# clean messages cruft
@@ -117,7 +117,9 @@ class SocketHandler extends EventEmitter
 				cb null, ticket, cleanMessages
 
 			], (err, ticket, messages) ->
-				if err
+				if err == "Denied Access"
+					callback err
+				else if err
 					callback "Unable to find ticket with that ID: " + id
 				else
 					callback null, ticket, messages
@@ -155,7 +157,6 @@ class SocketHandler extends EventEmitter
 					cb err, results, ticket
 
 			, (results, ticket, cb) ->
-
 				clean = self.cleanHTML data.description or ""
 				message = 
 					type: 'message'
@@ -196,11 +197,11 @@ class SocketHandler extends EventEmitter
 			(cb) ->
 				# save message to db
 				self.db.save message, cb
-			(results, cb) ->
+			, (results, cb) ->
 				self.socket.broadcast.emit('messageAdded', message.ticketid, message)
 				# load related ticket
 				self.db.get message.ticketid, cb
-			(ticket, cb) ->
+			, (ticket, cb) ->
 				# update date, status and names of ticket
 				for k,v of names
   				ticket.names[k] = v
@@ -232,7 +233,7 @@ class SocketHandler extends EventEmitter
 		self = @
 		# make sure timestamp is in the past!
 		timestamp = Date.now() - 1000
-		if self.isAdmin
+		if self.isAdmin()
 			ticket.modified = timestamp
 			self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
 				if err
@@ -246,21 +247,42 @@ class SocketHandler extends EventEmitter
 		else callback "Not authorized to update ticket!"
 
 	deleteTicket: (ticket, callback) ->
-		# TODO: also delete associated messages!
-
 		self = @
-		if self.isAdmin
-			self.db.remove ticket.id, ticket.rev, (err, res) ->
-				if err
-					console.log 'Unable to delete ticket ' + ticket.id
-					console.log err
-					callback err
+		async.waterfall([
+			(cb) ->
+				# authentication check
+				if self.isAdmin()
+					cb null
 				else
-					self.socket.broadcast.emit('ticketDeleted', res.id)
-					callback null
-		else
-			callback "Not authorized to delete ticket!"
+					cb "Not authorized to delete tickets!"
 
+			(cb) -> 
+				# get messages of ticket
+				self.db.view 'messages/ids', { startkey: ticket.id, endkey: ticket.id }, cb
+
+			, (messages, cb) ->
+				async.each(messages, self._deleteMessage, (err) ->
+					if err
+						console.log 'Unable to delete message ' + message.id
+						console.log err
+						cb err
+					else
+						cb null
+				)
+
+			, (cb) ->
+				# once all messages deleted, we can now delete the ticket
+				self.db.remove ticket.id, ticket.rev, (err, res) ->
+				 	if err
+				 		console.log 'Unable to delete ticket ' + ticket.id
+				 		console.log err
+				 		callback err
+				 	else
+				 		callback null, res
+			], (err, res) ->
+				self.socket.broadcast.emit('ticketDeleted', res.id) unless err
+			)
+			
 	cleanHTML: (html) -> 
 		# remove unsafe tags
 		clean = sanitizer.sanitize html
@@ -270,6 +292,10 @@ class SocketHandler extends EventEmitter
 		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
 
 		return clean
+
+	_deleteMessage: (message, callback) =>
+		self = @
+		self.db.remove message.id, message.rev, callback
 
 			
 
