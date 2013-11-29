@@ -281,11 +281,15 @@ class SocketHandler extends EventEmitter
 				 	if err
 				 		console.log 'Unable to delete ticket ' + ticket.id
 				 		console.log err
-				 		callback err
+				 		cb err
 				 	else
-				 		callback null, res
+				 		cb null, res
 			], (err, res) ->
-				self.socket.broadcast.emit('ticketDeleted', res.id) unless err
+				if err
+					callback err
+				else
+					self.socket.broadcast.emit('ticketDeleted', res.id)
+					callback null
 			)
 			
 	cleanHTML: (html) -> 
