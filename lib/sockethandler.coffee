@@ -71,9 +71,10 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-				if type == "open"
+				console.log type
+				if type == 0
 					self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
-				else if type == "closed"
+				else if type == 1
 					self.db.view 'tickets/closed', { descending: true, endkey: [group], startkey: [group,{}] } , cb
 				else
 					cb "Unknown ticket type"
