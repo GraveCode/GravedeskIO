@@ -23,6 +23,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
+		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
 
 	isAdmin: ->
 		i = @settings.admins.indexOf @user?.emails[0]?.value
@@ -251,7 +252,7 @@ class SocketHandler extends EventEmitter
 					callback null, ticket
 		else callback "Not authorized to update ticket!"
 
-	deleteTicket: (ticket, callback) ->
+	deleteTicket: (ticket, callback) =>
 		self = @
 		async.waterfall([
 			(cb) ->
@@ -291,6 +292,10 @@ class SocketHandler extends EventEmitter
 					self.socket.broadcast.emit('ticketDeleted', res.id)
 					callback null
 			)
+
+	bulkDelete: (tickets, callback) ->
+		self = @
+		async.each tickets, self.deleteTicket, callback
 			
 	cleanHTML: (html) -> 
 		# remove unsafe tags
