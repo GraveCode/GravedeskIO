@@ -37,7 +37,7 @@ class SocketHandler extends EventEmitter
 
 	getMyTickets: (user, callback) ->
 
-		@db.view 'tickets/byuser', { descending: true, endkey: [[user]], startkey: [[user,{}],{}] } , (err, results) ->
+		@db.view 'tickets/byuser', { descending: true, endkey: [user], startkey: [user,{}] } , (err, results) ->
 			if err
 				callback err
 			else
@@ -71,7 +71,6 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-				console.log type
 				if type == 0
 					self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
 				else if type == 1

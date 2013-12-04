@@ -35,7 +35,7 @@ addViews = (db, cb) ->
 						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], doc);}}"
 
 					byuser:
-						map: "function(doc) {if (doc.type === 'ticket') {emit([doc.recipients,doc.modified], doc);}}"
+						map: "function(doc) {if (doc.type === 'ticket') { for(var i=0, l=doc.recipients.length; i<l; i++) { emit([doc.recipients[i], doc.modified], doc); } } }"
 
 					count:
 						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], 1);}}"
@@ -74,7 +74,7 @@ addViews = (db, cb) ->
 # main function exported to server.coffee
 module.exports = (couchdb, callback) ->
 	c = new(cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
-			cache: true
+			cache: couchdb.cache
 			raw: false
 			auth:
 				username: couchdb.dbUser 

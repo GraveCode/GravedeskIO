@@ -8,6 +8,7 @@ module.exports = {
 		dbPass: 'password'
 		# create up to date couchdb views at every server start
 		overwriteViews: false
+		cache: true
 	}
 
 	# default local app port
