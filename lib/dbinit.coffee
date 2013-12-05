@@ -37,8 +37,12 @@ addViews = (db, cb) ->
 					byuser:
 						map: "function(doc) {if (doc.type === 'ticket') { for(var i=0, l=doc.recipients.length; i<l; i++) { emit([doc.recipients[i], doc.modified], doc); } } }"
 
-					count:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], 1);}}"
+					countopen:
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit(doc.group, 1);}}"
+						reduce: "_count"
+
+					countclosed:
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit(doc.group, 1);}}"
 						reduce: "_count"
 				}
 				# message views

@@ -18,6 +18,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'isAdmin', (callback) => @isAdminCB callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
+		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
 		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
@@ -87,7 +88,46 @@ class SocketHandler extends EventEmitter
 					callback null, cleanTickets
 			)
 
+	getTicketCounts: (type, length, callback) ->
+		self = @
+		async.waterfall([
+			(cb) ->
+				# authentication check
+				if self.isAdmin()
+					cb null
+				else
+					cb "Not authorized to retrieve ticket counts!"
 
+			, (cb) ->
+				iterator = (group, nextcb) ->
+					if type == 0
+						self.db.view 'tickets/countopen', { group: false, reduce:true, key: group }, (err, res) ->
+							if res[0]?.value
+								nextcb err, res[0].value
+							else
+								nextcb err, 0
+
+					else if type == 1
+						self.db.view 'tickets/countclosed', {group: false, reduce: true, key: group }, (err, res) ->
+							if res[0]?.value
+								nextcb err, res[0].value
+							else
+								nextcb err, 0
+					else
+						cb "Unknown ticket type"
+
+				if length > 0
+					groups = (num for num in [0..length-1])
+					async.map groups, iterator, cb
+				else
+					cb "invalid length"
+
+
+		], (err, results) ->
+			callback err, results
+		)
+
+			
 
 	getMessages: (id, callback) ->
 		self = @
