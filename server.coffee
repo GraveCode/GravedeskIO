@@ -65,11 +65,6 @@ io.set "authorization", passportSocketIO.authorize(
 		accept null, true
 )
 
-
-## routes
-
-require('./routes')(app, passport, settings)
-
 ## start servers
 
 async.series([
@@ -86,6 +81,11 @@ async.series([
 				#db.view 'tickets/count', { startkey: [settings.groups[0]], endkey: [settings.groups[0],{}], reduce: true} , (err,docs) ->
 				#	console.dir docs
 				callback null
+
+	, (callback) ->
+		## routes
+		require('./routes')(app, passport, settings, db)
+		callback null
 
 	, (callback) -> 
 		# start express

@@ -1,6 +1,6 @@
 ## routes
 
-module.exports = (app, passport, settings) ->
+module.exports = (app, passport, settings, db) ->
 
 	ensureAuthenticated = (req, res, next) ->
 		return next()  if req.isAuthenticated()
@@ -18,6 +18,20 @@ module.exports = (app, passport, settings) ->
 	), (req, res) ->
 		# The request will be redirected to Google for authentication, so this
 		# function will not be called.
+
+	app.get "/node/file/:id/:name", (req, res) ->
+		id = req.params.id
+		name = req.params.name
+		if id and name
+			readStream = db.getAttachment(id, name, (err) ->
+				if err
+					console.log err
+				return
+			)
+			readStream.pipe(res)
+		else
+			res.send "Need an ID and filename!"
+
 
 
 	app.get "/node/google/return", passport.authenticate("google",
