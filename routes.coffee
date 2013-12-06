@@ -1,3 +1,6 @@
+path = require 'path'
+fs = require 'fs'
+
 ## routes
 
 module.exports = (app, passport, settings, db) ->
@@ -32,6 +35,26 @@ module.exports = (app, passport, settings, db) ->
 		else
 			res.send "Need an ID and filename!"
 
+	app.post "/node/file/", (req, res) ->
+		if req.files.upload
+			idData = 
+				id: req.body.id
+				rev: req.body.rev
+
+			attachmentData = 
+				name: req.files.upload.name
+				'Content-Type': req.files.upload.type
+
+			console.log req.files.upload.path
+			readStream = fs.createReadStream req.files.upload.path
+			writeStream = db.saveAttachment idData, attachmentData, (err, reply) ->
+				if err
+					console.log err
+					return
+			readStream.pipe writeStream
+			res.redirect 'back'
+		else 
+			res.send "No upload received!"
 
 
 	app.get "/node/google/return", passport.authenticate("google",
