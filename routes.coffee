@@ -45,7 +45,6 @@ module.exports = (app, passport, settings, db) ->
 				name: req.files.upload.name
 				'Content-Type': req.files.upload.type
 
-			console.log req.files.upload.path
 			readStream = fs.createReadStream req.files.upload.path
 			writeStream = db.saveAttachment idData, attachmentData, (err, reply) ->
 				if err
