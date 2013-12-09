@@ -16,7 +16,8 @@
 		"marked": "0.2.x",
 		"sanitizer": "0.0.x",
 		"to-markdown": "0.0.x",
-		"connect-redis": "1.4.x"
+		"connect-redis": "1.4.x",
+		"nodemailer": "0.5.x"
 
 	},
 	"devDependencies": {

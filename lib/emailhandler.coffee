@@ -5,10 +5,12 @@ marked = require "marked"
 sanitizer = require "sanitizer"
 {toMarkdown} = require "to-markdown"
 contextio = require "contextio"
-
+nodemailer = require "nodemailer"
 
 class EmailHandler extends EventEmitter
-	constructor: (@joint, @settings) ->
+	constructor: (@joint, @db, @settings) ->
+		# define smtp server transport
+		@smtpTransport = nodemailer.createTransport "SMTP", @settings.smtpServer
 		# define context IO client 
 		@ctxioClient = new contextio.Client '2.0', 
 			key: @settings.contextIO.key 
@@ -38,7 +40,12 @@ class EmailHandler extends EventEmitter
 		@on "getMessageAttachmentsSuccess", @_processMessage 
 		# message pared down to only required info, hand off to create ticket
 		@on "processMessageSuccess", @joint.emailToTicket
+		# ticket added to db, move original message
+		@joint.on "emailToTicketSuccess", @_moveMessage 
+		# ticket added to db, send autoreply
+		@joint.on "ticketAdded", @_autoReply
 
+		@on "sendMail", @sendMail
 
 	# PUBLIC FUNCTIONS
 	getID: (callback) =>
@@ -71,7 +78,14 @@ class EmailHandler extends EventEmitter
 				console.log response
 			else
 				self.emit "flagMessageSuccess", msgid
-	
+
+	sendMail: (mail) =>
+		self = @
+		self.smtpTransport.sendMail mail, (err, res) ->
+			if err
+				self.emit "smtpSendFailure", err, mail.to
+			else
+				self.emit "smtpSendSuccess", mail.to
 	
 	# INTERNAL FUNCTIONS
 
@@ -191,33 +205,38 @@ class EmailHandler extends EventEmitter
 		self.emit "processMessageSuccess", msgid, form, attachments
 
 
-	###
-	_moveMessage: (msgid, destination) ->
-		ctxioClient.accounts(@ctxioID).messages(msgid).post
-			dst_folder: destination
+	_moveMessage: (msgid) =>
+		# move processed message to folder
+		self = @
+		self.ctxioClient.accounts(self.ctxioID).messages(msgid).post
+			dst_folder: self.settings.contextIO.endbox
 			move: 1
-		, (err, response) =>
+		, (err, response) ->
 			if err 
-				@emit "moveMessageError", err
+				self.emit "moveMessageError", err
 			else
 				# TODO - gmail leaves message in inbox, need to force it
-				@emit "moveMessageSuccess", msgid
+				self.emit "moveMessageSuccess"
 
 
-	_autoReply: (id, isNew) ->
-		outmail = {}
-		tickethandler.findById id, (err, ticket) =>
+	_autoReply: (ticketid, isNew) =>
+		self = @
+		outmail =
+			"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
+
+		self.db.get ticketid, (err, ticket) ->
 			if err
-				@emit "autoReplyError", err, id
-			else		
-				outmail.to = ticket.from
+				@emit "autoReplyError", err, ticketid
+			else
+				outmail.to = ticket.recipients.join(",")
 				if isNew
-					outmail.subject = "RE: " + ticket.subject + " - " + lang.newAutoReply.subject + " - ID: <" + id + ">"
-					outmail.html = "<html><header></header><body>"+lang.newAutoReply.body + ticket.description + "</body></html>"
+					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"
+					outmail.text = "Thanks for reporting your problem, it's been added as a new ticket."
 				else
-					outmail.subject = "RE: " + ticket.subject + " - " + lang.existingAutoReply.subject + " - ID: <" + id + ">"	
-					outmail.html = "<html><header></header><body>" + lang.existingAutoReply.body + "</body></html>"				
-				@emit "sendMail", outmail, id
-	###
+					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
+					outmail.text = "existing ticket reply goes here"				
+				
+				self.emit "sendMail", outmail
+
 
 module.exports = EmailHandler

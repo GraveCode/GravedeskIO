@@ -39,9 +39,9 @@ class Joint extends EventEmitter
 							console.log err
 						else if attachments.length == 0
 							# we're done here
+							self.emit "emailToTicketSuccess", msgid
 							return
 						else
-							idData.id = reply.id
 							idData.rev = reply.rev
 							record = attachments.splice(0,1)[0]
 							# recursion, baby
@@ -49,6 +49,10 @@ class Joint extends EventEmitter
 
 					# save first attachment					
 					self.db.saveAttachment idData, record, callback
+
+				else
+					# we're done here
+					self.emit "emailToTicketSuccess", msgid
 
 	addTicket: (data, callback) =>
 		# make sure timestamp is in the past
@@ -101,7 +105,11 @@ class Joint extends EventEmitter
 					callback msg
 				else
 					msg = 'Ticket added to system. '
-					self.socket.emit('ticketAdded', results.id, ticket)
+					# local emit for autoreply
+					console.log results.id + msg
+					self.emit 'ticketAdded', results.id, true
+					# socket emit for web interface
+					self.socket.emit 'ticketAdded', results.id, ticket
 					callback null, msg, results
 		)
 

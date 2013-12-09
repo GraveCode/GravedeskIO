@@ -104,15 +104,18 @@ async.series([
 	, (callback) ->
 		# setup email server, get ID from context IO
 		joint = new Joint(io.sockets, db, settings)
-		emailhandler = new EmailHandler(joint, settings)
+		emailhandler = new EmailHandler(joint, db, settings)
 		emailhandler.getID callback
+		
 		emailhandler.on "getIDSuccess", (id) -> console.log "ContextIO ID for " + settings.contextIO.email + " read as " + id
+		emailhandler.on "smtpSendSuccess", (to) -> console.log "Mail successfully sent to " + to
 
 		emailhandler.on "listMessagesError", (err) -> console.log err
 		emailhandler.on "flagMessageError", (err, id, res) -> console.log "unable to flag contextio message " + id + "read, error: " + err + ": " + res
 		emailhandler.on "getMessageError", (err, id, res) -> console.log "unable to retrieve contextio message " + id + ", error: " + err + ": " + res
 		emailhandler.on "getMessageAttachmentsError", (err, id) -> console.log "unable to retrieve contextio attachments for message " + id + ", error: " + err
 		emailhandler.on "SyncError", (err) -> console.log err
+		emailhandler.on "smtpSendError", (err, to) -> console.log "Error sending mail to " + to + " : " + err
 
 
 ], (err) ->
