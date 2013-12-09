@@ -96,18 +96,18 @@ class Joint extends EventEmitter
 
 				# add first message to db	
 				self.db.save message, (err, res) ->
-					cb err, results, ticket
+					cb err, results, ticket, clean
 					
-		], (err, results, ticket) ->
+		], (err, results, ticket, text) ->
 				if err 
 					msg = 'Unable to save ticket to database! '
 					console.log msg + err
 					callback msg
 				else
-					msg = 'Ticket added to system. '
+					msg = ' Ticket added to system. '
 					# local emit for autoreply
 					console.log results.id + msg
-					self.emit 'ticketAdded', results.id, true
+					self.emit 'ticketAdded', results.id, text, true
 					# socket emit for web interface
 					self.socket.emit 'ticketAdded', results.id, ticket
 					callback null, msg, results

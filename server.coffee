@@ -4,6 +4,7 @@ settings = require './settings'
 dbinit = require './lib/dbinit'
 SocketHandler = require './lib/sockethandler'
 EmailHandler = require './lib/emailhandler'
+lang = require './lib/lang'
 Joint = require './lib/joint'
 express = require 'express'
 async = require 'async'
@@ -104,9 +105,9 @@ async.series([
 	, (callback) ->
 		# setup email server, get ID from context IO
 		joint = new Joint(io.sockets, db, settings)
-		emailhandler = new EmailHandler(joint, db, settings)
+		emailhandler = new EmailHandler(joint, db, lang, settings)
 		emailhandler.getID callback
-		
+
 		emailhandler.on "getIDSuccess", (id) -> console.log "ContextIO ID for " + settings.contextIO.email + " read as " + id
 		emailhandler.on "smtpSendSuccess", (to) -> console.log "Mail successfully sent to " + to
 
@@ -116,6 +117,7 @@ async.series([
 		emailhandler.on "getMessageAttachmentsError", (err, id) -> console.log "unable to retrieve contextio attachments for message " + id + ", error: " + err
 		emailhandler.on "SyncError", (err) -> console.log err
 		emailhandler.on "smtpSendError", (err, to) -> console.log "Error sending mail to " + to + " : " + err
+		emailhandler.on "autoReplyError", (err, id) -> console.log "Error sending autoreply for ticket " + id + ": " + err 
 
 
 ], (err) ->

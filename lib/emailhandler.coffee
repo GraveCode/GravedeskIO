@@ -2,13 +2,11 @@
 {EventEmitter} = require "events" 
 async = require "async"
 marked = require "marked"
-sanitizer = require "sanitizer"
-{toMarkdown} = require "to-markdown"
 contextio = require "contextio"
 nodemailer = require "nodemailer"
 
 class EmailHandler extends EventEmitter
-	constructor: (@joint, @db, @settings) ->
+	constructor: (@joint, @db, @lang, @settings) ->
 		# define smtp server transport
 		@smtpTransport = nodemailer.createTransport "SMTP", @settings.smtpServer
 		# define context IO client 
@@ -44,8 +42,8 @@ class EmailHandler extends EventEmitter
 		@joint.on "emailToTicketSuccess", @_moveMessage 
 		# ticket added to db, send autoreply
 		@joint.on "ticketAdded", @_autoReply
-
-		@on "sendMail", @sendMail
+		# autoreply allowed and formatted, send
+		@on "autoReplySuccess", @sendMail
 
 	# PUBLIC FUNCTIONS
 	getID: (callback) =>
@@ -219,24 +217,51 @@ class EmailHandler extends EventEmitter
 				self.emit "moveMessageSuccess"
 
 
-	_autoReply: (ticketid, isNew) =>
+	_autoReply: (ticketid, senderText, isNew) =>
 		self = @
-		outmail =
-			"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
 
-		self.db.get ticketid, (err, ticket) ->
-			if err
-				@emit "autoReplyError", err, ticketid
-			else
-				outmail.to = ticket.recipients.join(",")
+		async.waterfall([
+			(cb) ->
+				self.db.get ticketid, cb
+
+			, (ticket, cb) ->
+				if self.settings.serverEmail.blockNonDomain	
+					# not allowed to email outside listed domain!
+					iterator = (item, callback) ->
+						result = (item.toLowerCase().search(self.settings.serverEmail.allowDomain.toLowerCase()) >= 0)
+						callback result
+
+					async.detect ticket.recipients, iterator, (result) ->
+						if result
+							# recipient addresses included one which included the allowed domain 
+							cb null, ticket
+						else
+							cb "No non-domain addresses found to send to."
+				else
+					# allowed to email anyone
+					cb null, ticket
+
+			, (ticket, cb) ->
+				# construct email
+				outmail =
+					"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
+					"to": ticket.recipients.join(",")				
+
 				if isNew
 					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"
-					outmail.text = "Thanks for reporting your problem, it's been added as a new ticket."
+					outmail.html = marked(self.lang.newAutoReply + senderText)
+
 				else
 					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
-					outmail.text = "existing ticket reply goes here"				
-				
-				self.emit "sendMail", outmail
+					outmail.text = "existing ticket reply goes here"			
 
+				cb null, outmail
+
+		], (err, result) ->
+				if err
+					self.emit "autoReplyError", err, ticketid
+				else			
+					self.emit "autoReplySuccess", result
+		)
 
 module.exports = EmailHandler
