@@ -107,10 +107,59 @@ class Joint extends EventEmitter
 					msg = ' Ticket added to system. '
 					# local emit for autoreply
 					console.log results.id + msg
-					self.emit 'ticketAdded', results.id, text, true
+					self.emit 'autoReply', results.id, text, true, null
 					# socket emit for web interface
 					self.socket.emit 'ticketAdded', results.id, ticket
 					callback null, msg, results
+		)
+
+	addMessage: (message, names, callback) =>
+		self = @
+		# make sure timestamp is in the past! 
+		timestamp = Date.now() - 1000
+		clean = self.cleanHTML message.text
+		message.text = clean
+		message.html = marked(clean)
+		message.type = 'message'
+		message.date = timestamp
+
+		async.waterfall([
+			(cb) ->
+				# save message to db
+				self.db.save message, cb
+			, (results, cb) ->
+				self.socket.emit('messageAdded', message.ticketid, message)
+				# load related ticket
+				self.db.get message.ticketid, cb
+			, (ticket, cb) ->
+				# update date, status and names of ticket
+				for k,v of names
+  				ticket.names[k] = v
+				ticket.modified = timestamp
+				if message.fromuser
+					ticket.status = 0
+				else if message.private
+					ticket.status = 1
+				else 
+					ticket.status = 2
+				self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
+					if err
+						cb err
+					else
+						cb null, ticket, res, clean, message
+
+		], (err, ticket, result, text, message) ->
+			if err
+					console.log 'Unable to update ticket ' + ticket._id
+					console.log err
+					callback err
+			else
+				ticket._rev = result.rev
+				# local emit for autoreply
+				if !message.private
+					self.emit 'autoReply', result.id, text, false, message
+				self.socket.emit('ticketUpdated', ticket._id, ticket)
+				callback null
 		)
 
 	cleanHTML: (html) -> 

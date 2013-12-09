@@ -41,7 +41,7 @@ class EmailHandler extends EventEmitter
 		# ticket added to db, move original message
 		@joint.on "emailToTicketSuccess", @_moveMessage 
 		# ticket added to db, send autoreply
-		@joint.on "ticketAdded", @_autoReply
+		@joint.on "autoReply", @_autoReply
 		# autoreply allowed and formatted, send
 		@on "autoReplySuccess", @sendMail
 
@@ -216,7 +216,7 @@ class EmailHandler extends EventEmitter
 				self.emit "moveMessageSuccess"
 
 
-	_autoReply: (ticketid, senderText, isNew) =>
+	_autoReply: (ticketid, senderText, isNew, message) =>
 		self = @
 
 		async.waterfall([
@@ -245,14 +245,13 @@ class EmailHandler extends EventEmitter
 				outmail =
 					"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
 					"to": ticket.recipients.join(",")				
-
+					"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
 				if isNew
-					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"
 					outmail.html = marked(self.lang.newAutoReply + senderText)
-
+				else if message?.fromuser
+					outmail.html = marked(self.lang.existingAutoReply + senderText)
 				else
-					outmail.subject = "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
-					outmail.text = "existing ticket reply goes here"			
+					outmail.html = marked(message.from + self.lang.adminReply + senderText)
 
 				cb null, outmail
 

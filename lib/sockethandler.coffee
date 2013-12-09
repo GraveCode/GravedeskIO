@@ -20,8 +20,8 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
-		@socket.on 'addTicket', (formdata, callback) => @joint.addTicket formdata, callback
-		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
+		@socket.on 'addTicket', @joint.addTicket
+		@socket.on 'addMessage', @joint.addMessage
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
 		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
