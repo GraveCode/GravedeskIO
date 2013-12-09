@@ -206,14 +206,13 @@ class EmailHandler extends EventEmitter
 	_moveMessage: (msgid) =>
 		# move processed message to folder
 		self = @
-		self.ctxioClient.accounts(self.ctxioID).messages(msgid).post
-			dst_folder: self.settings.contextIO.endbox
-			move: 1
+		self.ctxioClient.accounts(self.ctxioID).messages(msgid).folders().post
+			add: self.settings.contextIO.endbox
+			remove: self.settings.contextIO.inbox
 		, (err, response) ->
 			if err 
 				self.emit "moveMessageError", err
 			else
-				# TODO - gmail leaves message in inbox, need to force it
 				self.emit "moveMessageSuccess"
 
 
