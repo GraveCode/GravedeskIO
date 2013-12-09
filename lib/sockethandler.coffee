@@ -13,14 +13,14 @@ marked.setOptions(
 )
 
 class SocketHandler extends EventEmitter
-	constructor: (@socket, @db, @settings) ->
-		@user = @socket.handshake.user
+	constructor: (@socket, @db, @joint, @settings) ->
+		@user = @socket?.handshake?.user
 		@socket.on 'isAdmin', (callback) => @isAdminCB callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
-		@socket.on 'addTicket', (formdata, callback) => @addTicket formdata, callback
+		@socket.on 'addTicket', (formdata, callback) => @joint.addTicket formdata, callback
 		@socket.on 'addMessage', (message, names, callback) => @addMessage message, names, callback
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
@@ -174,60 +174,6 @@ class SocketHandler extends EventEmitter
 		else 
 			callback "Error accessing ticket, invalid ID"
 
-	addTicket: (data, callback) ->
-		# make sure timestamp is in the past
-		timestamp = Date.now() - 1000
-		self = @
-		nameObj = {}
-		if data?.name
-			nameObj[data.email] = data.name
-		# Add proper name for server user
-		nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
-
-		async.waterfall([
-			(cb) -> 
-				ticket = 
-					type: 'ticket'
-					created: timestamp
-					modified: timestamp
-					title: data.subject
-					status: 0
-					closed: false
-					group: +data.team
-					recipients: [data.email]
-					names: nameObj
-					priority: +data.priority
-
-				# add ticket to db
-				self.db.save ticket, (err, results) ->
-					cb err, results, ticket
-
-			, (results, ticket, cb) ->
-				clean = self.cleanHTML data.description or ""
-				message = 
-					type: 'message'
-					date: timestamp
-					from: data.email
-					private: false
-					text: clean
-					html: marked(clean)
-					fromuser: true
-					ticketid: results.id
-
-				# add first message to db	
-				self.db.save message, (err, res) ->
-					cb err, results, ticket
-					
-		], (err, results, ticket) ->
-				if err 
-					msg = 'Unable to save ticket to database! '
-					console.log msg + err
-					callback msg
-				else
-					msg = 'Ticket added to system. '
-					self.socket.broadcast.emit('ticketAdded', results.id, ticket)
-					callback null, msg
-		)
 
 	addMessage: (message, names, callback) ->
 		self = @
@@ -307,14 +253,16 @@ class SocketHandler extends EventEmitter
 				self.db.view 'messages/ids', { startkey: ticket.id, endkey: ticket.id }, cb
 
 			, (messages, cb) ->
-				async.each(messages, self._deleteMessage, (err) ->
-					if err
-						console.log 'Unable to delete message ' + message.id
-						console.log err
-						cb err
-					else
-						cb null
-				)
+				if messages
+					async.each messages, self._deleteMessage, (err) ->
+						if err
+							console.log 'Unable to delete message ' + message.id
+							console.log err
+							cb err
+						else
+							cb null
+				else
+					cb "No messages to delete!"
 
 			, (cb) ->
 				# once all messages deleted, we can now delete the ticket
