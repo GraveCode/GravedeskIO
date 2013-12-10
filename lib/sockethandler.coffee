@@ -248,7 +248,7 @@ class SocketHandler extends EventEmitter
 				else
 					cb "Not authorized to delete tickets!"
 
-			(cb) -> 
+			, (cb) -> 
 				# get messages of ticket
 				self.db.view 'messages/ids', { startkey: ticket.id, endkey: ticket.id }, cb
 

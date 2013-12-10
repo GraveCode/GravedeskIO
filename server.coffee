@@ -117,7 +117,8 @@ async.series([
 		emailhandler.on "getMessageAttachmentsError", (err, id) -> console.log "unable to retrieve contextio attachments for message " + id + ", error: " + err
 		emailhandler.on "SyncError", (err) -> console.log err
 		emailhandler.on "smtpSendError", (err, to) -> console.log "Error sending mail to " + to + " : " + err
-		emailhandler.on "autoReplyError", (err, id) -> console.log "Error sending autoreply for ticket " + id + ": " + err 
+		emailhandler.on "autoReplyError", (err, id) -> console.log "Error sending autoreply for ticket " + id + ": " + err
+		emailhandler.on "setWebhookError", (err, id) -> console.log "Error creating webhook for account " + id + ": " + err  
 
 
 ], (err) ->

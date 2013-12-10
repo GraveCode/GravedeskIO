@@ -22,6 +22,7 @@ class EmailHandler extends EventEmitter
 		# call sync and trigger a full mailbox check when ID retrieved
 		@on "getIDSuccess", @_sync
 		@on "getIDSuccess", @_listMessages
+		@on "getIDSuccess", @_setWebhook
 		# call sync when prompted by timeout
 		@on "doSync", @_sync
 		# call list when prompted by timeout
@@ -86,6 +87,58 @@ class EmailHandler extends EventEmitter
 				self.emit "smtpSendSuccess", mail.to
 	
 	# INTERNAL FUNCTIONS
+
+	_setWebhook: (id) =>
+		self = @		
+
+		async.waterfall([
+			(cb) ->
+				# get existing webhooks
+				self.ctxioClient.accounts(id).webhooks().get (err, res) ->
+					cb err, res
+
+			, (res, cb) ->
+				if res.body.length < 1
+					# if no webhook, next step
+					cb null, true
+				else if self.settings.contextIO.overwriteWebhooks
+					# if set to do webhooks every start, delete all existing
+					console.log "Deleting webhooks"
+					iterator = (webhook, callback) ->
+						self.ctxioClient.accounts(id).webhooks(webhook.webhook_id).delete callback
+	
+					async.each res.body, iterator, (err, res) ->
+						if err
+							cb err
+						else
+							# all deleted, next step
+							cb null, true
+
+				else 
+					cb null, false
+
+			, (createWebhook, cb) ->	
+				webhookSettings = 
+					callback_url: self.settings.clientURL + "/node/email/new"
+					failure_notif_url: self.settings.clientURL + "/node/email/failed"
+					sync_period: "immediate"	
+
+				if createWebhook
+					# create new webhook
+					console.log "Creating webhook"				
+					self.ctxioClient.accounts(id).webhooks().post webhookSettings, (err, res) ->
+						cb err
+
+				else
+					# no need to create webhook
+					cb null
+
+			], (err, res) ->
+				if err
+					self.emit "setWebhookError", err, id
+				else
+					self.emit "setWebhookSuccess"
+			)
 
 	_sync: =>
 		self = @
