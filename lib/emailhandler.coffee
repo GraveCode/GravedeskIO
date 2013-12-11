@@ -41,7 +41,7 @@ class EmailHandler extends EventEmitter
 		@on "processMessageSuccess", @joint.emailToTicket
 		# ticket added to db, move original message
 		@joint.on "emailToTicketSuccess", @_moveMessage 
-		# ticket added to db, send autoreply
+		# ticket/message added to db, send autoreply
 		@joint.on "autoReply", @_autoReply
 		# autoreply allowed and formatted, send
 		@on "autoReplySuccess", @sendMail
@@ -267,7 +267,7 @@ class EmailHandler extends EventEmitter
 				self.emit "moveMessageSuccess"
 
 
-	_autoReply: (ticketid, senderText, isNew, message) =>
+	_autoReply: (ticketid, senderText, isNew, isClosed, message) =>
 		self = @
 
 		async.waterfall([
@@ -299,10 +299,16 @@ class EmailHandler extends EventEmitter
 					"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
 				if isNew
 					outmail.html = marked(self.lang.newAutoReply + senderText)
+				else if isClosed and !senderText
+					outmail.html = marked(self.lang.standardClose)
+				else if isClosed
+					outmail.html = marked(self.lang.customClose + senderText)
 				else if message?.fromuser
 					outmail.html = marked(self.lang.existingAutoReply + senderText)
-				else
+				else if message
 					outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + senderText)
+				else
+					cb "Couldn't work out what type of autoreply to do! "
 
 				cb null, outmail
 
