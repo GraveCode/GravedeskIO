@@ -4,7 +4,7 @@ crypto = require 'crypto'
 
 ## routes
 
-module.exports = (app, passport, settings, db) ->
+module.exports = (app, passport, emailhandler, db, settings) ->
 
 	ensureAuthenticated = (req, res, next) ->
 		return next()  if req.isAuthenticated()
@@ -74,25 +74,22 @@ module.exports = (app, passport, settings, db) ->
 		req.logout()
 		res.redirect "https://accounts.google.com/Logout"
 
-	app.get "/node/settings", ensureAuthenticated, (req, res) ->
-		res.send settings.clientConfig
-
 	# email restful API
 
 	# receive notice of new mail from contextio
 	app.post '/node/email/new', (req, res) ->
+		console.log "new mail notification received"
 		signer = crypto.createHmac('sha256', settings.contextIO.secret)
-		expected = signer.update(req.body.timestamp + req.body.token).digest('hex')
-		if expected == req.body.signature
-			# valid notice, retrieve message
-			if req.body.message_data.message_id
-				console.log req.body.message_data.message_id
-
-		res.end
+		if req.body?.timestamp and req.body?.token
+			expected = signer.update(req.body?.timestamp + req.body?.token).digest('hex')
+			if expected == req.body.signature
+				# valid notice, retrieve message
+				emailhandler.flagMessage req.body.message_data.message_id
+		res.end()
 
 	# receive failure notice of webhook
 	app.post '/node/email/failed', (req, res) ->
 		console.log "email retrieval failure: "
 		console.log req.body
-		res.end
+		res.end()
 

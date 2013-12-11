@@ -20,6 +20,7 @@ RedisStore = require('connect-redis')(express)
 
 db = null
 joint = null
+emailhandler = null
 app = express()
 
 
@@ -91,11 +92,6 @@ async.series([
 				#	console.dir docs
 				callback null
 
-	, (callback) ->
-		## routes
-		require('./routes')(app, passport, settings, db)
-		callback null
-
 	, (callback) -> 
 		# start express
 		appserver.listen settings.defaultport
@@ -112,13 +108,20 @@ async.series([
 		emailhandler.on "smtpSendSuccess", (to) -> console.log "Mail successfully sent to " + to
 
 		emailhandler.on "listMessagesError", (err) -> console.log err
-		emailhandler.on "flagMessageError", (err, id, res) -> console.log "unable to flag contextio message " + id + "read, error: " + err + ": " + res
+		emailhandler.on "flagMessageError", (err, id, res) -> 
+			console.log "unable to flag contextio message " + id + " read, error: " + err
+			console.log res
 		emailhandler.on "getMessageError", (err, id, res) -> console.log "unable to retrieve contextio message " + id + ", error: " + err + ": " + res
 		emailhandler.on "getMessageAttachmentsError", (err, id) -> console.log "unable to retrieve contextio attachments for message " + id + ", error: " + err
 		emailhandler.on "SyncError", (err) -> console.log err
 		emailhandler.on "smtpSendError", (err, to) -> console.log "Error sending mail to " + to + " : " + err
 		emailhandler.on "autoReplyError", (err, id) -> console.log "Error sending autoreply for ticket " + id + ": " + err
 		emailhandler.on "setWebhookError", (err, id) -> console.log "Error creating webhook for account " + id + ": " + err  
+
+	, (callback) ->
+		## routes
+		require('./routes')(app, passport, emailhandler, db, settings)
+		callback null
 
 
 ], (err) ->

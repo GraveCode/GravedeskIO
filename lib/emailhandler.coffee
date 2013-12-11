@@ -8,7 +8,7 @@ nodemailer = require "nodemailer"
 class EmailHandler extends EventEmitter
 	constructor: (@joint, @db, @lang, @settings) ->
 		# define smtp server transport
-		@smtpTransport = nodemailer.createTransport "SMTP", @settings.smtpServer
+		@smtpTransport = nodemailer.createTransport "SMTP", @settings.serverEmail.smtpServer
 		# define context IO client 
 		@ctxioClient = new contextio.Client '2.0', 
 			key: @settings.contextIO.key 
@@ -72,9 +72,7 @@ class EmailHandler extends EventEmitter
 			seen: 1
 		, (err, response) ->
 			if err or !response.body.success
-				self.emit "flagMessageError", err
-				console.log err
-				console.log response
+				self.emit "flagMessageError", err, msgid, response
 			else
 				self.emit "flagMessageSuccess", msgid
 
@@ -122,6 +120,7 @@ class EmailHandler extends EventEmitter
 					callback_url: self.settings.clientURL + "/node/email/new"
 					failure_notif_url: self.settings.clientURL + "/node/email/failed"
 					sync_period: "immediate"	
+					filter_to: self.ctxioemail
 
 				if createWebhook
 					# create new webhook
@@ -251,7 +250,6 @@ class EmailHandler extends EventEmitter
 			html: ""
 		
 		attachments = files or []
-
 		checkbodytype obj for obj in msg.body
 		self.emit "processMessageSuccess", msgid, form, attachments
 
@@ -304,7 +302,7 @@ class EmailHandler extends EventEmitter
 				else if message?.fromuser
 					outmail.html = marked(self.lang.existingAutoReply + senderText)
 				else
-					outmail.html = marked(message.from + self.lang.adminReply + senderText)
+					outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + senderText)
 
 				cb null, outmail
 

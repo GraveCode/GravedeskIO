@@ -14,33 +14,80 @@ marked.setOptions(
 
 class Joint extends EventEmitter
 	constructor: (@socket, @db, @settings) ->
+		# on email to be added as newticket
+		@on "doNewTicket", @_doNewTicket
+		@on "doNewReply", @_doNewReply		
 
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
-		# assume all emails are new tickets!
 		form.description = form.html or form.text or ""
+		# strip quoted lines we put in
+		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
+		# new ticket or reply?
+		searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
+		if searchstring 
+			# ticket ID like number found in subject, strip < and >
+			substring = searchstring.pop().slice(1,-1)
+			self.db.get substring, (err, results) ->
+				if err
+					# ticket not found, create as new
+					self.emit 'doNewTicket', msgid, form, attachments
+				else
+					# ticket with that id found
+					if !results.closed
+						# and ticket still open
+						self.emit 'doNewReply', msgid, results, form, attachments
+					else
+						# old ticket is closed, treat as new
+						self.emit 'doNewTicket', msgid, form, attachments
+		else 
+			# ticket ID number not found in subject, new ticket
+			self.emit 'doNewTicket', msgid, form, attachments
 
-		# first add ticket
-		self.addTicket form, (err, msg, results) ->
-			if err
-				console.log "Unable to save ticket."
-			else
+
+	_doNewReply: (msgid, ticket, form, attachments) =>
+		console.log attachments
+		# strip extra quote lines
+		form.description = form.description.replace(/^.*On(.|\n|\r)*wrote:/m,'')
+		form.description = form.description.replace(/^\>(.*)/gm, '')
+
+		self = @
+		message = 
+			from: form.email
+			private: false
+			text: form.description
+			fromuser: true
+			ticketid: ticket._id
+
+		# add email sender name
+		names = ticket?.names or {}
+		names[form.email] = form.name
+
+		async.waterfall([
+			(cb) ->
+				# first add message
+				self.addMessage message, names, cb
+
+			(results, cb) ->
 				# now add attachments to that ticket
 				if attachments.length > 0
+					console.log "adding attachments, wooo"
 					# remove the first attachment from array as record
 					record = attachments.splice(0,1)[0]
 					idData = 
 						id: results.id
 						rev: results.rev
 
+					# setup recursive loop through attachments
 					callback = (err, reply) ->
 						if err
+							# stop here
 							console.log "Unable to save attachment!"
 							console.log err
+							cb err
 						else if attachments.length == 0
 							# we're done here
-							self.emit "emailToTicketSuccess", msgid
-							return
+							cb null
 						else
 							idData.rev = reply.rev
 							record = attachments.splice(0,1)[0]
@@ -51,9 +98,68 @@ class Joint extends EventEmitter
 					self.db.saveAttachment idData, record, callback
 
 				else
-					# we're done here
-					self.emit "emailToTicketSuccess", msgid
+					# no attachments, we're done here
+					cb null
 
+		], (err) ->
+			if err
+				console.log "adding new email as reply message failed."
+				console.log err
+			else
+				self.emit "emailToTicketSuccess", msgid
+		)
+
+
+	_doNewTicket: (msgid, form, attachments) =>
+		self = @
+		# clean up old ID strings from subject, if any
+		form.subject = form.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
+
+		async.waterfall([
+			(cb) ->
+				# first add ticket
+				self.addTicket form, cb
+
+			(msg, results, cb) ->
+				# now add attachments to that ticket
+				if attachments.length > 0
+					# remove the first attachment from array as record
+					record = attachments.splice(0,1)[0]
+					idData = 
+						id: results.id
+						rev: results.rev
+
+					# setup recursive loop through attachments
+					callback = (err, reply) ->
+						if err
+							# stop here
+							console.log "Unable to save attachment!"
+							console.log err
+							cb err
+						else if attachments.length == 0
+							# we're done here
+							cb null
+						else
+							idData.rev = reply.rev
+							record = attachments.splice(0,1)[0]
+							# recursion, baby
+							self.db.saveAttachment idData, record, callback
+
+					# save first attachment					
+					self.db.saveAttachment idData, record, callback
+
+				else
+					# no attachments, we're done here
+					cb null
+
+		], (err) ->
+			if err
+				console.log "adding new email as ticket failed."
+				console.log err
+			else
+				self.emit "emailToTicketSuccess", msgid
+		)
+					
 	addTicket: (data, callback) =>
 		# make sure timestamp is in the past
 		timestamp = Date.now() - 1000
@@ -134,7 +240,7 @@ class Joint extends EventEmitter
 			, (ticket, cb) ->
 				# update date, status and names of ticket
 				for k,v of names
-  				ticket.names[k] = v
+					ticket.names[k] = v
 				ticket.modified = timestamp
 				if message.fromuser
 					ticket.status = 0
@@ -159,12 +265,14 @@ class Joint extends EventEmitter
 				if !message.private
 					self.emit 'autoReply', result.id, text, false, message
 				self.socket.emit('ticketUpdated', ticket._id, ticket)
-				callback null
+				callback null, result
 		)
 
 	cleanHTML: (html) -> 
 		# remove unsafe tags
 		clean = sanitizer.sanitize html
+		# remove img tags in body (thanks, osx mail)
+		clean = clean.replace(/<img[^>]+\>/i, "")		
 		# convert safe tags to markdown
 		clean = toMarkdown clean
 		# Remove all remaining HTML tags.
