@@ -16,6 +16,7 @@ class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @joint, @settings) ->
 		@user = @socket?.handshake?.user
 		@socket.on 'isAdmin', (callback) => @isAdminCB callback
+		@socket.on 'isTech', (callback) => @isTechCB callback
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
@@ -34,8 +35,18 @@ class SocketHandler extends EventEmitter
 		else
 			return false	
 
+	isTech: ->
+		i = @settings.techs.indexOf @user?.emails[0]?.value
+		if i >= 0
+			return true
+		else
+			return false
+
 	isAdminCB: (callback) ->
 		callback null, @isAdmin()
+
+	isTechCB: (callback) ->
+		callback null, @isTech()
 
 	getMyTickets: (user, callback) ->
 
@@ -67,7 +78,7 @@ class SocketHandler extends EventEmitter
 		async.waterfall([
 			(cb) ->
 				# authentication check
-				if self.isAdmin()
+				if self.isAdmin() or self.isTech()
 					cb null
 				else
 					cb "Not authorized to retrieve all tickets!"
@@ -94,7 +105,7 @@ class SocketHandler extends EventEmitter
 		async.waterfall([
 			(cb) ->
 				# authentication check
-				if self.isAdmin()
+				if self.isAdmin() or self.isTech()
 					cb null
 				else
 					cb "Not authorized to retrieve ticket counts!"
@@ -145,7 +156,7 @@ class SocketHandler extends EventEmitter
 					i = ticket.recipients.indexOf self.user.emails[0].value
 
 					# if admin, show all messages
-					if self.isAdmin()
+					if self.isAdmin() or self.isTech()
 						self.db.view 'messages/all', { startkey: [id], endkey: [id, {}] }, (err, messages) ->
 							cb err, ticket, messages
 
@@ -179,7 +190,7 @@ class SocketHandler extends EventEmitter
 		self = @
 		# make sure timestamp is in the past!
 		timestamp = Date.now() - 1000
-		if self.isAdmin()
+		if self.isAdmin() or self.isTech()
 			ticket.modified = timestamp
 			self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
 				if err
