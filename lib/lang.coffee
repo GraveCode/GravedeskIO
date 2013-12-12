@@ -16,6 +16,5 @@ module.exports = {
 	"adminReply0": "---- _PLEASE ONLY REPLY ABOVE THIS LINE_\n\n"
 
 	"adminReply1": " has responded to your ticket.\n\n" +
-		"_Their message:_\n" +
 		"***\n\n"
 }

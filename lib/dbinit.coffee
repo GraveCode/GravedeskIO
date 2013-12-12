@@ -1,6 +1,6 @@
 async = require 'async'
 cradle = require 'cradle'
-designs = ['tickets', 'messages', 'autoreplies']
+designs = ['tickets', 'messages']
 
 addViews = (db, cb) ->
 	async.series([
@@ -29,21 +29,24 @@ addViews = (db, cb) ->
 				# ticket views
 				{	
 					open:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit([doc.group, doc.priority, doc.modified], doc);}}"
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.priority, doc.modified], doc);}}"
+						reduce: "_count"
 
 					closed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit([doc.group, doc.modified], doc);}}"
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.modified], doc);}}"
+						reduce: "_count"
+
+					personalopen:
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group === 0) { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						reduce: "_count"
+
+					personalclosed:
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group === 0)  { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						reduce: "_count"
 
 					byuser:
 						map: "function(doc) {if (doc.type === 'ticket') { for(var i=0, l=doc.recipients.length; i<l; i++) { emit([doc.recipients[i], doc.modified], doc); } } }"
 
-					countopen:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket') {emit(doc.group, 1);}}"
-						reduce: "_count"
-
-					countclosed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket') {emit(doc.group, 1);}}"
-						reduce: "_count"
 				}
 				# message views
 				, { 
@@ -56,10 +59,6 @@ addViews = (db, cb) ->
 					ids:
 						map: "function(doc) {if (doc.type === 'message') {emit(doc.ticketid, {id: doc._id, rev: doc._rev});}}"	
 
-				}
-				# autoreply views
-				, { all:
-						map: "function(doc) {if (doc.type === 'autoreply') {emit([doc.ticketid, doc.date], doc);}}"						
 				}
 			]
 

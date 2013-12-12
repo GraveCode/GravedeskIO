@@ -245,7 +245,7 @@ class EmailHandler extends EventEmitter
 			name: msg.addresses.from?.name or null
 			subject: msg?.subject or null
 			priority: 1
-			team: 0
+			team: 1
 			text: ""
 			html: ""
 		
@@ -293,24 +293,28 @@ class EmailHandler extends EventEmitter
 
 			, (ticket, cb) ->
 				# construct email
-				outmail =
-					"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
-					"to": ticket.recipients.join(",")				
-					"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
-				if isNew
-					outmail.html = marked(self.lang.newAutoReply + senderText)
-				else if isClosed and !senderText
-					outmail.html = marked(self.lang.standardClose)
-				else if isClosed
-					outmail.html = marked(self.lang.customClose + senderText)
-				else if message?.fromuser
-					outmail.html = marked(self.lang.existingAutoReply + senderText)
-				else if message
-					outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + senderText)
+				if ticket.recipients.length > 0
+					outmail =
+						"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
+						"to": ticket.recipients.join(",")				
+						"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
+					if isNew
+						outmail.html = marked(self.lang.newAutoReply + senderText)
+					else if isClosed and !senderText
+						outmail.html = marked(self.lang.standardClose)
+					else if isClosed
+						outmail.html = marked(self.lang.customClose + senderText)
+					else if message?.fromuser
+						outmail.html = marked(self.lang.existingAutoReply + senderText)
+					else if message
+						outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + senderText)
+					else
+						cb "Couldn't work out what type of autoreply to do! "
+	
+					cb null, outmail
 				else
-					cb "Couldn't work out what type of autoreply to do! "
-
-				cb null, outmail
+					# no recipients!
+					cb "No recipients on the ticket. "
 
 		], (err, result) ->
 				if err

@@ -84,24 +84,40 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-				if type == 0
-					self.db.view 'tickets/open', { descending: true, endkey: [group], startkey: [group,{},{}] } , cb
-				else if type == 1
-					self.db.view 'tickets/closed', { descending: true, endkey: [group], startkey: [group,{}] } , cb
+
+				if group == 0
+					# personal tickets
+					if type == 0
+						self.db.view 'tickets/personalopen', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] } , cb
+					else if type == 1
+						self.db.view 'tickets/personalclosed', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] } , cb
+					else
+						cb "unknown ticket type"
+
 				else
-					cb "Unknown ticket type"
+					# general tickets
+					if type == 0
+						self.db.view 'tickets/open', { reduce: false, descending: true, endkey: [group], startkey: [group,{},{}] } , cb
+					else if type == 1
+						self.db.view 'tickets/closed', { reduce: false, descending: true, endkey: [group], startkey: [group,{}] } , cb
+					else
+						cb "Unknown ticket type"
+
+			, (results, cb) ->
+					# strip id/key headers
+					cleanTickets = results.map unwrapObject
+					cb null, cleanTickets
 
 			], (err, results) ->
 				if err
 					callback err
 				else
-					# strip id/key headers
-					cleanTickets = results.map unwrapObject
-					callback null, cleanTickets
+					callback null, results
 			)
 
-	getTicketCounts: (type, length, callback) ->
+	getTicketCounts: (type, length, callback) =>
 		self = @
+		
 		async.waterfall([
 			(cb) ->
 				# authentication check
@@ -112,21 +128,50 @@ class SocketHandler extends EventEmitter
 
 			, (cb) ->
 				iterator = (group, nextcb) ->
-					if type == 0
-						self.db.view 'tickets/countopen', { group: false, reduce:true, key: group }, (err, res) ->
-							if res[0]?.value
-								nextcb err, res[0].value
-							else
-								nextcb err, 0
+					if group == 0
+						# personal tickets
+						if type == 0
+							self.db.view 'tickets/personalopen', { group: false, reduce:true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] }, (err, res) ->
+								if err
+									nextcb err
+								else if res[0]?.value
+									nextcb null, res[0].value
+								else
+									nextcb null, 0
 
-					else if type == 1
-						self.db.view 'tickets/countclosed', {group: false, reduce: true, key: group }, (err, res) ->
-							if res[0]?.value
-								nextcb err, res[0].value
-							else
-								nextcb err, 0
-					else
-						cb "Unknown ticket type"
+						else if type == 1
+							self.db.view 'tickets/personalclosed', {group: false, reduce: true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] }, (err, res) ->
+								if err
+									nextcb err
+								else if res[0]?.value
+									nextcb null, res[0].value
+								else
+									nextcb null, 0
+
+						else
+							cb "Unknown ticket type"
+
+					else 
+						# general tickets
+						if type == 0
+							self.db.view 'tickets/open', { group: false, reduce:true, descending: true, endkey: [group], startkey: [group,{},{}] }, (err, res) ->
+								if err
+									nextcb err
+								else if res[0]?.value
+									nextcb null, res[0].value
+								else
+									nextcb null, 0
+
+						else if type == 1
+							self.db.view 'tickets/closed', {group: false, reduce: true, descending: true, endkey: [group], startkey: [group,{},{}] }, (err, res) ->
+								if err
+									nextcb err
+								else if res[0]?.value
+									nextcb null, res[0].value
+								else
+									nextcb null, 0
+						else
+							cb "Unknown ticket type"
 
 				if length > 0
 					groups = (num for num in [0..length-1])

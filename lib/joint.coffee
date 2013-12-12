@@ -73,6 +73,7 @@ class Joint extends EventEmitter
 					recipients: [data.email]
 					names: nameObj
 					priority: +data.priority
+					personal: null
 
 				# add ticket to db
 				self.db.save ticket, (err, results) ->
@@ -152,7 +153,9 @@ class Joint extends EventEmitter
 			else
 				ticket._rev = result.rev
 				# local emit for autoreply
-				if !message.private and !suppressSend
+				if message.private or suppressSend or ticket.recipients.length < 1
+					# ignore message
+				else
 					self.emit 'autoReply', result.id, text, false, false, message
 				self.socket.emit('ticketUpdated', ticket._id, ticket)
 				callback null, result
