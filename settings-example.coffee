@@ -19,6 +19,9 @@ module.exports = {
 	clientID: '12345.apps.googleusercontent.com'
 	clientSecret: 'secret'
 
+	# maximum allowed messages on a single ticket (anti-spam measure)
+	maxMessages: 200
+
 
 	# context.io settings for reading mail tickets
 	contextIO: {

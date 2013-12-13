@@ -58,6 +58,7 @@ addViews = (db, cb) ->
 
 					ids:
 						map: "function(doc) {if (doc.type === 'message') {emit(doc.ticketid, {id: doc._id, rev: doc._rev});}}"	
+						reduce: "_count"
 
 				}
 			]

@@ -20,7 +20,7 @@ class Joint extends EventEmitter
 
 	closeWithEmail: (ticketid, message) =>
 		self = @
-		if message
+		if message 
 			message = self.cleanHTML(message)
 		@emit 'autoReply', ticketid, message, false, true, null
 
@@ -122,12 +122,28 @@ class Joint extends EventEmitter
 
 		async.waterfall([
 			(cb) ->
+				# count number of existing messages
+				self.db.view 'messages/ids', { reduce: true, startkey: message.ticketid, endkey: message.ticketid }, cb
+
+			, (res, cb) ->
+				count = res[0]?.value
+				if count and count > self.settings?.maxMessages
+					cb "Maximum number of allowed messages reached for ticket " + message.ticketid + ", message ignored."
+
+				else
+					# message limit not reached
+
+					cb null
+
+			, (cb) ->
 				# save message to db
 				self.db.save message, cb
+
 			, (results, cb) ->
 				self.socket.emit('messageAdded', message.ticketid, message)
 				# load related ticket
 				self.db.get message.ticketid, cb
+
 			, (ticket, cb) ->
 				# update date, status and names of ticket
 				for k,v of names
@@ -147,7 +163,7 @@ class Joint extends EventEmitter
 
 		], (err, ticket, result, text, message) ->
 			if err
-					console.log 'Unable to update ticket ' + ticket._id
+					console.log 'Unable to add message. '
 					console.log err
 					callback err
 			else

@@ -23,6 +23,18 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 		# The request will be redirected to Google for authentication, so this
 		# function will not be called.
 
+	app.get "/node/google/return", passport.authenticate("google",
+		failureRedirect: "/login/"
+	), (req, res) ->
+		# test if admin user
+		user = req.user.emails[0].value
+		i = settings.admins.indexOf user
+		if i >= 0
+			# admin user found
+			res.redirect "/manage/"
+		else
+			res.redirect "/"
+
 	app.get "/node/file/:id/:name", (req, res) ->
 		id = req.params.id
 		name = req.params.name
@@ -55,20 +67,6 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 			res.redirect 'back'
 		else 
 			res.send "No upload received!"
-
-
-	app.get "/node/google/return", passport.authenticate("google",
-		failureRedirect: "/login/"
-	), (req, res) ->
-		# test if admin user
-		user = req.user.emails[0].value
-		i = settings.admins.indexOf user
-		if i >= 0
-			# admin user found
-			res.redirect "/manage/"
-		else
-			res.redirect "/"
-
 	
 	app.get "/node/logout", (req, res) ->
 		req.logout()
