@@ -126,13 +126,12 @@ class Joint extends EventEmitter
 				self.db.view 'messages/ids', { reduce: true, startkey: message.ticketid, endkey: message.ticketid }, cb
 
 			, (res, cb) ->
-				count = res[0]?.value
+				count = + res[0]?.value
 				if count and count > self.settings?.maxMessages
 					cb "Maximum number of allowed messages reached for ticket " + message.ticketid + ", message ignored."
 
 				else
 					# message limit not reached
-
 					cb null
 
 			, (cb) ->
@@ -155,6 +154,7 @@ class Joint extends EventEmitter
 					ticket.status = 1
 				else 
 					ticket.status = 2
+
 				self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
 					if err
 						cb err
@@ -211,7 +211,8 @@ class Joint extends EventEmitter
 		async.waterfall([
 			(cb) ->
 				# first add message
-				self.addMessage message, names, cb
+				self.addMessage message, names, false, cb
+
 
 			(results, cb) ->
 				# now add attachments to that ticket
