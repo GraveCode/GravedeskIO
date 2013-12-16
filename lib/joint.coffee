@@ -26,7 +26,7 @@ class Joint extends EventEmitter
 
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
-		form.description = form.html or form.text or ""
+		form.description = form.text or form.html or ""
 		# strip quoted lines we put in
 		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
 		# new ticket or reply?
