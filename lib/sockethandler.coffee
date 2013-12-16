@@ -221,7 +221,7 @@ class SocketHandler extends EventEmitter
 
 			], (err, ticket, messages) ->
 				if err == "Denied Access"
-					callback err
+					callback "Sorry, you've been denied access to this ticket. Please check you're logged in with the right account."
 				else if err
 					callback "Unable to find ticket with that ID: " + id
 				else

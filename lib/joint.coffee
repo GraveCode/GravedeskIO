@@ -101,9 +101,9 @@ class Joint extends EventEmitter
 					console.log msg + err
 					callback msg
 				else
-					msg = ' Ticket added to system. '
+					msg = 'Ticket added to system. '
 					# local emit for autoreply
-					console.log results.id + msg
+					console.log msg + "ID: " + results.id
 					self.emit 'autoReply', results.id, text, true, false, null
 					# socket emit for web interface
 					self.socket.emit 'ticketAdded', results.id, ticket
