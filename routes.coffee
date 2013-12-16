@@ -8,7 +8,7 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 
 	ensureAuthenticated = (req, res, next) ->
 		return next()  if req.isAuthenticated()
-		res.redirect "/login/"
+		res.end()
 
 	# standard pages
 	app.get "/node/", (req, res) ->
@@ -33,7 +33,7 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 			# admin user found
 			res.redirect "/manage/"
 		else
-			res.redirect "/"
+			res.redirect "/redirect/"
 
 	app.get "/node/file/:id/:name", (req, res) ->
 		id = req.params.id
