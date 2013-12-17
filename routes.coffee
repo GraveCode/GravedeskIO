@@ -70,7 +70,7 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 	
 	app.get "/node/logout", (req, res) ->
 		req.logout()
-		res.redirect "https://accounts.google.com/Logout"
+		res.redirect "/logout"
 
 	# email restful API
 
