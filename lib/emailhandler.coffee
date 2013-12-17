@@ -5,6 +5,13 @@ marked = require "marked"
 contextio = require "contextio"
 nodemailer = require "nodemailer"
 
+marked.setOptions(
+	gfm: true
+	breaks: true
+	smartypants: true
+	sanitize: true
+)
+
 class EmailHandler extends EventEmitter
 	constructor: (@joint, @db, @lang, @settings) ->
 		# define smtp server transport
@@ -156,11 +163,11 @@ class EmailHandler extends EventEmitter
 
 	_listMessages: =>
 		self = @
-		# after 10 minutes trigger the next full list check - this is just belt and braces 
+		# after 5 minutes trigger the next full list check - this is just belt and braces 
 		# the webhook should notify us of new messages as they occur
 		setTimeout (->
 			self.emit "doList"
-		), (10 * 60 * 1000)	
+		), (5 * 60 * 1000)	
 		# get list of recent messages in inbox
 		self.ctxioClient.accounts(self.ctxioID).messages().get
 			"folder": self.settings.contextIO.inbox
@@ -298,16 +305,18 @@ class EmailHandler extends EventEmitter
 						"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
 						"to": ticket.recipients.join(",")				
 						"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
+
+					link = "[online](" + self.settings.clientURL + "/messages/?id=" + ticketid + ")."
 					if isNew
-						outmail.html = marked(self.lang.newAutoReply + senderText)
+						outmail.html = marked(self.lang.newAutoReply0 + link + self.lang.newAutoReply1 + senderText)
 					else if isClosed and !senderText
-						outmail.html = marked(self.lang.standardClose)
+						outmail.html = marked(self.lang.standardClose + link) 
 					else if isClosed
-						outmail.html = marked(self.lang.customClose + senderText)
+						outmail.html = marked(self.lang.customClose0 + link + self.lang.customClose1 + senderText)
 					else if message?.fromuser
-						outmail.html = marked(self.lang.existingAutoReply + senderText)
+						outmail.html = marked(self.lang.existingAutoReply0 + link + self.lang.existingAutoReply1 + senderText)
 					else if message
-						outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + senderText)
+						outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + link + self.lang.adminReply2 + senderText)
 					else
 						cb "Couldn't work out what type of autoreply to do! "
 	

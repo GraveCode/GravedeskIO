@@ -20,13 +20,13 @@ class Joint extends EventEmitter
 
 	closeWithEmail: (ticketid, message) =>
 		self = @
-		if message
+		if message 
 			message = self.cleanHTML(message)
 		@emit 'autoReply', ticketid, message, false, true, null
 
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
-		form.description = form.html or form.text or ""
+		form.description = form.text or form.html or ""
 		# strip quoted lines we put in
 		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
 		# new ticket or reply?
@@ -101,9 +101,9 @@ class Joint extends EventEmitter
 					console.log msg + err
 					callback msg
 				else
-					msg = ' Ticket added to system. '
+					msg = 'Ticket added to system. '
 					# local emit for autoreply
-					console.log results.id + msg
+					console.log msg + "ID: " + results.id
 					self.emit 'autoReply', results.id, text, true, false, null
 					# socket emit for web interface
 					self.socket.emit 'ticketAdded', results.id, ticket
@@ -122,12 +122,27 @@ class Joint extends EventEmitter
 
 		async.waterfall([
 			(cb) ->
+				# count number of existing messages
+				self.db.view 'messages/ids', { reduce: true, startkey: message.ticketid, endkey: message.ticketid }, cb
+
+			, (res, cb) ->
+				count = + res[0]?.value
+				if count and count > self.settings?.maxMessages
+					cb "Maximum number of allowed messages reached for ticket " + message.ticketid + ", message ignored."
+
+				else
+					# message limit not reached
+					cb null
+
+			, (cb) ->
 				# save message to db
 				self.db.save message, cb
+
 			, (results, cb) ->
 				self.socket.emit('messageAdded', message.ticketid, message)
 				# load related ticket
 				self.db.get message.ticketid, cb
+
 			, (ticket, cb) ->
 				# update date, status and names of ticket
 				for k,v of names
@@ -139,6 +154,7 @@ class Joint extends EventEmitter
 					ticket.status = 1
 				else 
 					ticket.status = 2
+
 				self.db.save ticket._id, ticket._rev, ticket, (err, res) ->
 					if err
 						cb err
@@ -147,7 +163,7 @@ class Joint extends EventEmitter
 
 		], (err, ticket, result, text, message) ->
 			if err
-					console.log 'Unable to update ticket ' + ticket._id
+					console.log 'Unable to add message. '
 					console.log err
 					callback err
 			else
@@ -195,7 +211,8 @@ class Joint extends EventEmitter
 		async.waterfall([
 			(cb) ->
 				# first add message
-				self.addMessage message, names, cb
+				self.addMessage message, names, false, cb
+
 
 			(results, cb) ->
 				# now add attachments to that ticket
