@@ -25,4 +25,12 @@ module.exports = {
 		"You can see this ticket history and add your own reply " 
 
 	"adminReply2" : "\n\n***\n\n"
+
+	"statuses" : 
+		adminstatus: ["New message", "Note added", "Waiting on user", "Awaiting 3rd party"]
+		adminstatusCSS: ["alert", "success", "secondary", "secondary"]
+		userstatus: ["Recorded", "In progress", "Reply added", "Awaiting 3rd party"]
+		userstatusCSS: ["secondary", "success", "alert", "secondary"]
+		priority: ["Low", "Normal", "High"]
+		priorityCSS: ["", "secondary", "alert"]
 }

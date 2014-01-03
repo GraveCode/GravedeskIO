@@ -13,10 +13,12 @@ marked.setOptions(
 )
 
 class SocketHandler extends EventEmitter
-	constructor: (@socket, @db, @joint, @settings) ->
+	constructor: (@socket, @db, @joint, @lang, @settings) ->
 		@user = @socket?.handshake?.user
-		@socket.on 'isAdmin', (callback) => @isAdminCB callback
-		@socket.on 'isTech', (callback) => @isTechCB callback
+		@socket.on 'isAdmin', @isAdminCB 
+		@socket.on 'isTech', @isTechCB
+		@socket.on 'getStatuses', @getStatuses
+		@socket.on 'getGroups', @getGroups
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
@@ -28,25 +30,31 @@ class SocketHandler extends EventEmitter
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
 		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
 
-	isAdmin: ->
+	isAdmin: =>
 		i = @settings.admins.indexOf @user?.emails[0]?.value
 		if i >= 0
 			return true
 		else
 			return false	
 
-	isTech: ->
+	isTech: =>
 		i = @settings.techs.indexOf @user?.emails[0]?.value
 		if i >= 0
 			return true
 		else
 			return false
 
-	isAdminCB: (callback) ->
+	isAdminCB: (callback) =>
 		callback null, @isAdmin()
 
-	isTechCB: (callback) ->
+	isTechCB: (callback) =>
 		callback null, @isTech()
+
+	getStatuses: (callback) =>
+		callback null, @lang.statuses
+
+	getGroups: (callback) =>
+		callback null, @settings.groups
 
 	getMyTickets: (user, callback) ->
 
