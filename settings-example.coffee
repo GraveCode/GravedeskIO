@@ -66,5 +66,8 @@ module.exports = {
 		blockNonDomain: false
 		# ignored if blockNonDomain is set false
 		allowDomain: "example.com"
+
+	# visible groups on the management view
+	groups: ["IT Support", "Network & Systems", "Long term", "Software Dev"]
 }
 

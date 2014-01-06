@@ -15,8 +15,6 @@ marked.setOptions(
 class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @joint, @lang, @settings) ->
 		@user = @socket?.handshake?.user
-		@socket.on 'isAdmin', @isAdminCB 
-		@socket.on 'isTech', @isTechCB
 		@socket.on 'getStatics', @getStatics
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
@@ -42,12 +40,6 @@ class SocketHandler extends EventEmitter
 			return true
 		else
 			return false
-
-	isAdminCB: (callback) =>
-		callback null, @isAdmin()
-
-	isTechCB: (callback) =>
-		callback null, @isTech()
 
 	getStatics: (callback) =>
 		# clone groups
