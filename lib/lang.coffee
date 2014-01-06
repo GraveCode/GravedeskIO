@@ -33,4 +33,6 @@ module.exports = {
 		userstatusCSS: ["secondary", "success", "alert", "secondary"]
 		priority: ["Low", "Normal", "High"]
 		priorityCSS: ["", "secondary", "alert"]
+
+	"privategroup" : "Owned"
 }

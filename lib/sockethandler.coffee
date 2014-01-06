@@ -17,8 +17,7 @@ class SocketHandler extends EventEmitter
 		@user = @socket?.handshake?.user
 		@socket.on 'isAdmin', @isAdminCB 
 		@socket.on 'isTech', @isTechCB
-		@socket.on 'getStatuses', @getStatuses
-		@socket.on 'getGroups', @getGroups
+		@socket.on 'getStatics', @getStatics
 		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
 		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
@@ -50,11 +49,19 @@ class SocketHandler extends EventEmitter
 	isTechCB: (callback) =>
 		callback null, @isTech()
 
-	getStatuses: (callback) =>
-		callback null, @lang.statuses
+	getStatics: (callback) =>
+		# clone groups
+		groups = @settings.groups.slice(0)
+		# add standard 'private tickets' group to defined group list
+		groups.unshift @lang.privategroup
+		console.log 
+		statics = 
+			isAdmin: @isAdmin()
+			isTech: @isTech()
+			statuses: @lang.statuses
+			groups: groups
+		callback null, statics
 
-	getGroups: (callback) =>
-		callback null, @settings.groups
 
 	getMyTickets: (user, callback) ->
 
@@ -123,7 +130,7 @@ class SocketHandler extends EventEmitter
 					callback null, results
 			)
 
-	getTicketCounts: (type, length, callback) =>
+	getTicketCounts: (type, callback) =>
 		self = @
 
 		async.waterfall([
@@ -181,8 +188,9 @@ class SocketHandler extends EventEmitter
 						else
 							cb "Unknown ticket type"
 
+				length = self.settings.groups.length
 				if length > 0
-					groups = (num for num in [0..length-1])
+					groups = (num for num in [0..length])
 					async.map groups, iterator, cb
 				else
 					cb "invalid length"
