@@ -135,6 +135,6 @@ async.series([
 ## socket.io
 
 io.sockets.on 'connection', (socket) ->
-	sockethandler = new SocketHandler(socket, db, joint, settings)
+	sockethandler = new SocketHandler(socket, db, joint, lang, settings)
 
 
