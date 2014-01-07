@@ -29,6 +29,8 @@ class Joint extends EventEmitter
 		form.description = form.text or form.html or ""
 		# strip quoted lines we put in
 		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
+		# won't be an owned ticket
+		form.personal = null
 		# new ticket or reply?
 		searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
 		if searchstring 
@@ -59,6 +61,8 @@ class Joint extends EventEmitter
 			nameObj[data.email] = data.name
 		# Add proper name for server user
 		nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
+		console.log "adding ticket"
+		console.log data
 
 		async.waterfall([
 			(cb) -> 
@@ -73,7 +77,7 @@ class Joint extends EventEmitter
 					recipients: [data.email]
 					names: nameObj
 					priority: +data.priority
-					personal: null
+					personal: data.personal
 
 				# add ticket to db
 				self.db.save ticket, (err, results) ->
