@@ -61,8 +61,6 @@ class Joint extends EventEmitter
 			nameObj[data.email] = data.name
 		# Add proper name for server user
 		nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
-		console.log "adding ticket"
-		console.log data
 
 		async.waterfall([
 			(cb) -> 
