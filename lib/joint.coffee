@@ -219,7 +219,6 @@ class Joint extends EventEmitter
 			(results, cb) ->
 				# now add attachments to that ticket
 				if attachments.length > 0
-					console.log "adding attachments, wooo"
 					# remove the first attachment from array as record
 					record = attachments.splice(0,1)[0]
 					idData = 
