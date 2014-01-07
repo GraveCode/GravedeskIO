@@ -17,9 +17,10 @@ module.exports = (app, passport, emailhandler, db, settings) ->
 	app.get "/node/getuser", ensureAuthenticated, (req, res) ->
 		res.send req.user
 
-	app.get "/node/google", passport.authenticate("google",
+	app.get "/node/google", passport.authenticate("google",{
 		scope: ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"]
-	), (req, res) ->
+		hostedDomain: settings.clientDomain or null
+	}), (req, res) ->
 		# The request will be redirected to Google for authentication, so this
 		# function will not be called.
 

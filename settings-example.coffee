@@ -18,6 +18,8 @@ module.exports = {
 	# google oauth2 authentication settings
 	clientID: '12345.apps.googleusercontent.com'
 	clientSecret: 'secret'
+	# restrict logins to only allow from a specific google hosted domain if set
+	clientDomain: ''
 
 	# maximum allowed messages on a single ticket (anti-spam measure)
 	maxMessages: 200
