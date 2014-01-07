@@ -46,7 +46,6 @@ class SocketHandler extends EventEmitter
 		groups = @settings.groups.slice(0)
 		# add standard 'private tickets' group to defined group list
 		groups.unshift @lang.privategroup
-		console.log 
 		statics = 
 			isAdmin: @isAdmin()
 			isTech: @isTech()

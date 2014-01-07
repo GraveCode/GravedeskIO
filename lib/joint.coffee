@@ -29,6 +29,8 @@ class Joint extends EventEmitter
 		form.description = form.text or form.html or ""
 		# strip quoted lines we put in
 		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
+		# won't be an owned ticket
+		form.personal = null
 		# new ticket or reply?
 		searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
 		if searchstring 
@@ -73,7 +75,7 @@ class Joint extends EventEmitter
 					recipients: [data.email]
 					names: nameObj
 					priority: +data.priority
-					personal: null
+					personal: data.personal
 
 				# add ticket to db
 				self.db.save ticket, (err, results) ->
@@ -217,7 +219,6 @@ class Joint extends EventEmitter
 			(results, cb) ->
 				# now add attachments to that ticket
 				if attachments.length > 0
-					console.log "adding attachments, wooo"
 					# remove the first attachment from array as record
 					record = attachments.splice(0,1)[0]
 					idData = 
