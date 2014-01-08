@@ -18,7 +18,7 @@ addViews = (db, cb) ->
 					else
 						subcallback "Problem deleting design: " + doc
 
-			# delete design document for each design in tesigns array
+			# delete design document for each design in designs array
 			async.forEach designs, deleteDesign, callback
 
 		# now we have a clean slate to add the new design documents
@@ -72,7 +72,9 @@ addViews = (db, cb) ->
 			async.forEach designs, saveDesign, callback
 
 	# and pass back any errors to the callback			
-	], cb)
+	], (err, results) ->
+		cb err
+	)
 
 
 # main function exported to server.coffee
@@ -84,33 +86,64 @@ module.exports = (couchdb, callback) ->
 				username: couchdb.dbUser 
 				password: couchdb.dbPass
 		)
-	db = c.database couchdb.dbName
+	sc = new(cradle.Connection)('http://localhost', 5984, 
+			cache: false
+			raw: false
+			auth:
+				username: couchdb.dbUser 
+				password: couchdb.dbPass
+		)
 
-	# couchdb connection
-	db.exists (err, exists) ->
-		# check we can connect to database!
+	db = c.database couchdb.dbName
+	sessiondb = sc.database couchdb.dbName + '-sessions'
+
+	async.waterfall([
+		(cb) ->
+			# test if main couchdb exists yet
+			db.exists cb
+
+		, (exists, cb) ->
+			if exists
+				# remove old view data
+				console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
+				db.viewCleanup()
+				# db exists, so add design document views if necessary, and return db object
+				if couchdb.overwriteViews
+					console.log "Updating design documents"
+					addViews db, cb
+
+			else
+				# db doesn't exist yet, so we create it and add the design document views
+				db.create()
+				console.log 'Created database "' + couchdb.dbName + '" on ' + couchdb.dbServer
+				console.log "Adding design documents"
+				addViews db, cb
+
+	, (cb) ->
+		sessiondb.exists cb
+
+	, (exists, cb) ->
+		if exists
+			sessiondb.viewCleanup()
+			cb null
+		else
+			sessiondb.create()
+			console.log 'Created session database.'
+			sessiondb.save "_design/connect-sessions", {
+        "expires": {
+            "map": "(function (doc) {\n if (doc.type == 'connect-session' && doc.expires) {\n emit(doc.expires);\n }\n })"
+        }
+    	}, cb
+
+
+	], (err) ->
 		if err
 			callback err
-		else if exists
-			# db exists, so 
-			# add design document views, and return db object
-			console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
-			# remove old view data
-			db.viewCleanup()
-			# check if we wish to create views 
-			if couchdb.overwriteViews
-				console.log "Adding design documents"
-				addViews db, (err) ->
-					callback err, db
-			else 
-				callback null, db
-
 		else
-			# db doesn't exist yet, so we create it and add the design document views
-			db.create()
-			console.log 'Created database ' + couchdb.dbName + ' on ' + couchdb.dbServer
-			console.log "Adding design documents"
-			addViews db, (err) ->
-				callback err, db
+			callback null, db
+	)
+
+
+
 
 
