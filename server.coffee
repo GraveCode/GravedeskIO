@@ -14,7 +14,7 @@ passport = require 'passport'
 passportSocketIO = require 'passport.socketio'
 GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 
-RedisStore = require('connect-redis')(express)
+couchStore = require('connect-couchdb')(express)
 
 {EventEmitter} = require "events"
 
@@ -42,7 +42,13 @@ passport.use new GoogleStrategy(
 		done null, profile
 )
 
-sessionStore = new RedisStore
+sessionStore = new couchStore {
+	name: settings.couchdb.dbName + '-sessions'
+	reapInterval: 600000
+	compactInterval: 300000
+	setThrottle: 60000
+}
+
 
 app.enable 'trust proxy'
 
@@ -85,11 +91,6 @@ async.series([
 				callback err
 			else
 				db = database
-				# example queries
-				#db.view 'tickets/open', { startkey: [settings.groups[0]], endkey: [settings.groups[0],{}] } , (err,docs) ->
-				#	console.dir docs
-				#db.view 'tickets/count', { startkey: [settings.groups[0]], endkey: [settings.groups[0],{}], reduce: true} , (err,docs) ->
-				#	console.dir docs
 				callback null
 
 	, (callback) -> 
