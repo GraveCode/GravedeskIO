@@ -111,6 +111,8 @@ module.exports = (couchdb, callback) ->
 				if couchdb.overwriteViews
 					console.log "Updating design documents"
 					addViews db, cb
+				else
+					cb null
 
 			else
 				# db doesn't exist yet, so we create it and add the design document views
