@@ -3,6 +3,7 @@
 async = require "async"
 marked = require "marked"
 sanitizer = require "sanitizer"
+bleach = require "bleach"
 {toMarkdown} = require "to-markdown"
 
 marked.setOptions(
@@ -26,7 +27,7 @@ class Joint extends EventEmitter
 
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
-		form.description = form.text or form.html or ""
+		form.description = form.html or form.text or ""
 		# strip quoted lines we put in
 		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
 		# won't be an owned ticket
@@ -180,18 +181,23 @@ class Joint extends EventEmitter
 		)
 
 	cleanHTML: (html) -> 
-		# remove unsafe tags
-		clean = sanitizer.sanitize html
-		# remove img tags in body (thanks, osx mail)
-		clean = clean.replace(/<img[^>]+\>/i, "")		
-		# convert safe tags to markdown
-		clean = toMarkdown clean
-		# Remove all remaining HTML tags.
-		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
-
-		return clean
-
-
+		clean = ""
+		try
+			# remove unsafe tags
+			clean = bleach.sanitize html
+			clean = sanitizer.sanitize clean
+			# remove img tags in body (thanks, osx mail)
+			clean = clean.replace(/<img[^>]+\>/i, "")		
+			# convert safe tags to markdown
+			clean = toMarkdown clean
+			# Remove all remaining HTML tags.
+			clean = clean.replace(/<(?:.|\n)*?>/gm, "")
+		catch
+			console.log "error sanitizing html:"
+			console.log clean
+		finally
+			return clean			
+	
 
 	_doNewReply: (msgid, ticket, form, attachments) =>
 		# strip extra quote lines
