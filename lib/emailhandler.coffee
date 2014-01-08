@@ -282,48 +282,58 @@ class EmailHandler extends EventEmitter
 				self.db.get ticketid, cb
 
 			, (ticket, cb) ->
-				if self.settings.serverEmail.blockNonDomain	
-					# not allowed to email outside listed domain!
-					iterator = (item, callback) ->
-						result = (item.toLowerCase().search(self.settings.serverEmail.allowDomain.toLowerCase()) >= 0)
-						callback result
+				# trim recipients to allowed list
+				# clone recipients list
+				recipients = ticket.recipients.slice(0)
 
-					async.detect ticket.recipients, iterator, (result) ->
-						if result
-							# recipient addresses included one which included the allowed domain 
-							cb null, ticket
+				iterator = (item, callback) ->
+					# return true if wish to discard address from recipients
+					# check if sending to ourselves! (mail loop)
+					if item.toLowerCase().search(self.settings.contextIO.email) >= 0
+						callback true
+					# if relay to external domains blocked
+					else if self.settings.serverEmail.blockNonDomain
+						# check if on allowed domain
+						result = (item.toLowerCase().search(self.settings.serverEmail.allowDomain.toLowerCase()) >= 0)
+						if result 
+							# email includes allowed domain
+							callback false
 						else
-							cb "No non-domain addresses found to send to."
-				else
-					# allowed to email anyone
-					cb null, ticket
+							# email not in allowed domain
+							callback true
+					# no reason to block this address
+					else
+						callback false
+
+				async.reject recipients, iterator, (result) ->
+					if result.length > 0
+						ticket.recipients = result
+						# recipient addresses included at least one allowed
+						cb null, ticket
+					else
+						cb "No valid addresses found to send to."
 
 			, (ticket, cb) ->
-				# construct email
-				if ticket.recipients.length > 0
-					outmail =
-						"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
-						"to": ticket.recipients.join(",")				
-						"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
+				outmail =
+					"from": self.settings.serverEmail.name + " <" + self.settings.serverEmail.email + ">"
+					"to": ticket.recipients.join(",")				
+					"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
 
-					link = "[online](" + self.settings.clientURL + "/messages/?id=" + ticketid + ")."
-					if isNew
-						outmail.html = marked(self.lang.newAutoReply0 + link + self.lang.newAutoReply1 + senderText)
-					else if isClosed and !senderText
-						outmail.html = marked(self.lang.standardClose + link) 
-					else if isClosed
-						outmail.html = marked(self.lang.customClose0 + link + self.lang.customClose1 + senderText)
-					else if message?.fromuser
-						outmail.html = marked(self.lang.existingAutoReply0 + link + self.lang.existingAutoReply1 + senderText)
-					else if message
-						outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + link + self.lang.adminReply2 + senderText)
-					else
-						cb "Couldn't work out what type of autoreply to do! "
-	
-					cb null, outmail
+				link = "[online](" + self.settings.clientURL + "/messages/?id=" + ticketid + ")."
+				if isNew
+					outmail.html = marked(self.lang.newAutoReply0 + link + self.lang.newAutoReply1 + senderText)
+				else if isClosed and !senderText
+					outmail.html = marked(self.lang.standardClose + link) 
+				else if isClosed
+					outmail.html = marked(self.lang.customClose0 + link + self.lang.customClose1 + senderText)
+				else if message?.fromuser
+					outmail.html = marked(self.lang.existingAutoReply0 + link + self.lang.existingAutoReply1 + senderText)
+				else if message
+					outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + link + self.lang.adminReply2 + senderText)
 				else
-					# no recipients!
-					cb "No recipients on the ticket. "
+					cb "Couldn't work out what type of autoreply to do! "
+	
+				cb null, outmail
 
 		], (err, result) ->
 				if err
