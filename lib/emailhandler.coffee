@@ -87,7 +87,7 @@ class EmailHandler extends EventEmitter
 		self = @
 		self.smtpTransport.sendMail mail, (err, res) ->
 			if err
-				self.emit "smtpSendFailure", err, mail.to
+				self.emit "smtpSendError", err, mail.to
 			else
 				self.emit "smtpSendSuccess", mail.to
 	
@@ -158,7 +158,7 @@ class EmailHandler extends EventEmitter
 			if err
 				console.log err
 				console.log response
-				self.emit "SyncFailure", self.ctxioID
+				self.emit "SyncError", self.ctxioID
 			self.emit "SyncSuccess" unless err
 
 	_listMessages: =>
