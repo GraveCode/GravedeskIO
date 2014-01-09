@@ -182,9 +182,13 @@ class Joint extends EventEmitter
 
 	cleanHTML: (html) -> 
 		clean = ""
+		whitelist = ['a','b','i','em','strong','br', 'p', 'hr', 'pre', 'ol', 'ul', 'li', 'dl', 'table', 'th', 'td', 'tr']
+		options = 
+			mode: 'white'
+			list: whitelist
 		try
 			# remove unsafe tags
-			clean = bleach.sanitize html
+			clean = bleach.sanitize html, options
 			clean = sanitizer.sanitize clean
 			# remove img tags in body (thanks, osx mail)
 			clean = clean.replace(/<img[^>]+\>/i, "")		
