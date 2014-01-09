@@ -319,6 +319,8 @@ class SocketHandler extends EventEmitter
 			self.db.remove message.id, message.rev, (err, res) ->
 				self.socket.broadcast.emit('messageDeleted', res.id)
 				callback err
+		else
+			callback "Unknown message ID or revision."
 
 			
 
