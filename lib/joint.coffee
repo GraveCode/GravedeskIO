@@ -142,6 +142,8 @@ class Joint extends EventEmitter
 				self.db.save message, cb
 
 			, (results, cb) ->
+				message._id = results.id
+				message._rev = results.rev
 				self.socket.emit('messageAdded', message.ticketid, message)
 				# load related ticket
 				self.db.get message.ticketid, cb

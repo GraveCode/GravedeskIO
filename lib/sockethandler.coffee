@@ -25,6 +25,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'closeWithEmail', @joint.closeWithEmail
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
+		@socket.on 'deleteMessage', @deleteMessage
 		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
 
 	isAdmin: =>
@@ -271,7 +272,7 @@ class SocketHandler extends EventEmitter
 
 			, (messages, cb) ->
 				if messages
-					async.each messages, self._deleteMessage, (err) ->
+					async.each messages, self.deleteMessage, (err) ->
 						if err
 							console.log 'Unable to delete message ' + message.id
 							console.log err
@@ -312,9 +313,12 @@ class SocketHandler extends EventEmitter
 
 		return clean
 
-	_deleteMessage: (message, callback) =>
+	deleteMessage: (message, callback) =>
 		self = @
-		self.db.remove message.id, message.rev, callback
+		if message.id and message.rev
+			self.db.remove message.id, message.rev, (err, res) ->
+				self.socket.broadcast.emit('messageDeleted', res.id)
+				callback err
 
 			
 
