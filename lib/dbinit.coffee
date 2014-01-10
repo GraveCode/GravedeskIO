@@ -29,19 +29,19 @@ addViews = (db, cb) ->
 				# ticket views
 				{	
 					open:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.priority, doc.modified], doc);}}"
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.priority, doc.created], doc);}}"
 						reduce: "_count"
 
 					closed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.modified], doc);}}"
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.created], doc);}}"
 						reduce: "_count"
 
 					personalopen:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group === 0) { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group === 0) { emit([doc.personal, doc.priority, doc.created], doc); } }"	
 						reduce: "_count"
 
 					personalclosed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group === 0)  { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group === 0)  { emit([doc.personal, doc.created], doc); } }"	
 						reduce: "_count"
 
 					byuser:
@@ -86,16 +86,8 @@ module.exports = (couchdb, callback) ->
 				username: couchdb.dbUser 
 				password: couchdb.dbPass
 		)
-	sc = new(cradle.Connection)('http://localhost', 5984, 
-			cache: false
-			raw: false
-			auth:
-				username: couchdb.dbUser 
-				password: couchdb.dbPass
-		)
 
 	db = c.database couchdb.dbName
-	sessiondb = sc.database couchdb.dbName + '-sessions'
 
 	async.waterfall([
 		(cb) ->
@@ -107,7 +99,7 @@ module.exports = (couchdb, callback) ->
 				# remove old view data
 				console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
 				db.viewCleanup()
-				# db exists, so add design document views if necessary, and return db object
+				# db exists, so add design document views if necessary
 				if couchdb.overwriteViews
 					console.log "Updating design documents"
 					addViews db, cb
@@ -121,27 +113,11 @@ module.exports = (couchdb, callback) ->
 				console.log "Adding design documents"
 				addViews db, cb
 
-	, (cb) ->
-		sessiondb.exists cb
-
-	, (exists, cb) ->
-		if exists
-			sessiondb.viewCleanup()
-			cb null
-		else
-			sessiondb.create()
-			console.log 'Created session database.'
-			sessiondb.save "_design/connect-sessions", {
-        "expires": {
-            "map": "(function (doc) {\n if (doc.type == 'connect-session' && doc.expires) {\n emit(doc.expires);\n }\n })"
-        }
-    	}, cb
-
-
 	], (err) ->
 		if err
 			callback err
 		else
+			# return db object to main server 
 			callback null, db
 	)
 

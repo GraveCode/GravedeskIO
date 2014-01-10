@@ -14,15 +14,13 @@ passport = require 'passport'
 passportSocketIO = require 'passport.socketio'
 GoogleStrategy = require('passport-google-oauth').OAuth2Strategy
 
-couchStore = require('connect-couchdb')(express)
-
+redisStore = require('connect-redis')(express)
 {EventEmitter} = require "events"
 
 db = null
 joint = null
 emailhandler = null
 app = express()
-
 
 # passport requirements
 
@@ -42,13 +40,7 @@ passport.use new GoogleStrategy(
 		done null, profile
 )
 
-sessionStore = new couchStore {
-	name: settings.couchdb.dbName + '-sessions'
-	reapInterval: 600000
-	compactInterval: 300000
-	setThrottle: 60000
-}
-
+sessionStore = new redisStore {host:'127.0.0.1', port:6379, prefix:'sessionStore'}
 
 app.enable 'trust proxy'
 

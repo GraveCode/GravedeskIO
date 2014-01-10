@@ -148,7 +148,7 @@ class SocketHandler extends EventEmitter
 									nextcb null, 0
 
 						else if type == 1
-							self.db.view 'tickets/personalclosed', {group: false, reduce: true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] }, (err, res) ->
+							self.db.view 'tickets/personalclosed', {group: false, reduce: true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] }, (err, res) ->
 								if err
 									nextcb err
 								else if res[0]?.value
@@ -171,7 +171,7 @@ class SocketHandler extends EventEmitter
 									nextcb null, 0
 
 						else if type == 1
-							self.db.view 'tickets/closed', {group: false, reduce: true, descending: true, endkey: [group], startkey: [group,{},{}] }, (err, res) ->
+							self.db.view 'tickets/closed', {group: false, reduce: true, descending: true, endkey: [group], startkey: [group,{}] }, (err, res) ->
 								if err
 									nextcb err
 								else if res[0]?.value
