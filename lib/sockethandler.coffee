@@ -25,6 +25,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'closeWithEmail', @joint.closeWithEmail
 		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
 		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
+		@socket.on 'updateMessage', @updateMessage
 		@socket.on 'deleteMessage', @deleteMessage
 		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
 
@@ -312,6 +313,24 @@ class SocketHandler extends EventEmitter
 		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
 
 		return clean
+
+	updateMessage: (message, callback) =>
+		self = @
+		if self.isAdmin() or self.isTech()
+			clean = self.joint.cleanHTML message.text
+			message.text = clean
+			message.html = marked clean
+			self.db.save message._id, message._rev, message, (err, res) ->
+				if err
+					console.log 'Unable to save message ' + message._id
+					console.log err
+					callback err
+				else
+					message._rev = res.rev
+					self.socket.broadcast.emit 'messageUpdated', message.ticketid, message
+					callback null, message
+		else 
+			callback "Not authorized to update message!"
 
 	deleteMessage: (message, callback) =>
 		self = @
