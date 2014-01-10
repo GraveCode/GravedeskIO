@@ -29,11 +29,14 @@ class Joint extends EventEmitter
 		self = @
 		form.description = form.html or form.text or ""
 		# strip quoted lines we put in
-		form.description = form.description.replace(/^.*PLEASE ONLY REPLY ABOVE THIS LINE(.|\n|\r)*/m,'')	
+		form.description = form.description.replace(/^.*Please only type your reply above this line(.|\n|\r)*/m,'')	
 		# won't be an owned ticket
 		form.personal = null
 		# new ticket or reply?
-		searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
+		if form.subject
+			searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
+		else 
+			searchstring = null
 		if searchstring 
 			# ticket ID like number found in subject, strip < and >
 			substring = searchstring.pop().slice(1,-1)
@@ -69,7 +72,7 @@ class Joint extends EventEmitter
 					type: 'ticket'
 					created: timestamp
 					modified: timestamp
-					title: data.subject
+					title: data.subject or "No subject"
 					status: 0
 					closed: false
 					group: +data.team
@@ -184,7 +187,7 @@ class Joint extends EventEmitter
 
 	cleanHTML: (html) -> 
 		clean = ""
-		whitelist = ['a','b','i','em','strong','br', 'p', 'hr', 'pre', 'ol', 'ul', 'li', 'dl', 'table', 'th', 'td', 'tr']
+		whitelist = ['a','b','i','em','strong','br', 'p', 'hr', 'pre', 'ol', 'ul', 'li', 'dl', 'table', 'th', 'td', 'tr', 'blockquote']
 		options = 
 			mode: 'white'
 			list: whitelist
@@ -206,10 +209,6 @@ class Joint extends EventEmitter
 	
 
 	_doNewReply: (msgid, ticket, form, attachments) =>
-		# strip extra quote lines
-		form.description = form.description.replace(/^.*On(.|\n|\r)*wrote:/m,'')
-		form.description = form.description.replace(/^\>(.*)/gm, '')
-
 		self = @
 		message = 
 			from: form.email
@@ -272,7 +271,8 @@ class Joint extends EventEmitter
 	_doNewTicket: (msgid, form, attachments) =>
 		self = @
 		# clean up old ID strings from subject, if any
-		form.subject = form.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
+		if form.subject
+			form.subject = form.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
 
 		async.waterfall([
 			(cb) ->
