@@ -29,19 +29,19 @@ addViews = (db, cb) ->
 				# ticket views
 				{	
 					open:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.priority, doc.modified], doc);}}"
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.priority, doc.created], doc);}}"
 						reduce: "_count"
 
 					closed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.modified], doc);}}"
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group !== 0) {emit([doc.group, doc.created], doc);}}"
 						reduce: "_count"
 
 					personalopen:
-						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group === 0) { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						map: "function(doc) {if (!doc.closed && doc.type === 'ticket' && doc.group === 0) { emit([doc.personal, doc.priority, doc.created], doc); } }"	
 						reduce: "_count"
 
 					personalclosed:
-						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group === 0)  { emit([doc.personal, doc.priority, doc.modified], doc); } }"	
+						map: "function(doc) {if (doc.closed && doc.type === 'ticket' && doc.group === 0)  { emit([doc.personal, doc.created], doc); } }"	
 						reduce: "_count"
 
 					byuser:
