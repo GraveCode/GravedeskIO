@@ -2,7 +2,6 @@
 {EventEmitter} = require "events" 
 async = require "async"
 marked = require "marked"
-sanitizer = require "sanitizer"
 bleach = require "bleach"
 {toMarkdown} = require "to-markdown"
 
@@ -27,11 +26,7 @@ class Joint extends EventEmitter
 
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
-		form.description = form.html or form.text or ""
-		# strip quoted lines we put in
-		form.description = form.description.replace(/^.*Please only type your reply above this line(.|\n|\r)*/m,'')	
-		# won't be an owned ticket
-		form.personal = null
+		form.description = form.html or form.text or "Email body empty."
 		# new ticket or reply?
 		if form.subject
 			searchstring = form.subject.match(/\<[a-z|A-Z|0-9]*\>/g) 
@@ -86,12 +81,13 @@ class Joint extends EventEmitter
 					cb err, results, ticket
 
 			, (results, ticket, cb) ->
-				clean = self.cleanHTML(data.description) or ""
+				clean = self.cleanHTML(data.description) or "Error cleaning message text."
 				message = 
 					type: 'message'
 					date: timestamp
 					from: data.email
 					private: false
+					raw: data.description
 					text: clean
 					html: marked(clean)
 					fromuser: true
@@ -116,15 +112,21 @@ class Joint extends EventEmitter
 					callback null, msg, results
 		)
 
-	addMessage: (message, names, suppressSend, callback) =>
+	addMessage: (data, names, suppressSend, callback) =>
 		self = @
 		# make sure timestamp is in the past! 
 		timestamp = Date.now() - 1000
-		clean = self.cleanHTML message.text
-		message.text = clean
-		message.html = marked(clean)
-		message.type = 'message'
-		message.date = timestamp
+		clean = self.cleanHTML(data.text) or "Error cleaning message text."
+		message = 
+			type: 'message'
+			date: timestamp
+			from: data.from
+			private: data.private
+			raw: data.text
+			text: clean
+			html: marked(clean)
+			fromuser: data.fromuser
+			ticketid: data.ticketid
 
 		async.waterfall([
 			(cb) ->
@@ -194,7 +196,6 @@ class Joint extends EventEmitter
 		try
 			# remove unsafe tags
 			clean = bleach.sanitize html, options
-			clean = sanitizer.sanitize clean
 			# remove img tags in body (thanks, osx mail)
 			clean = clean.replace(/<img[^>]+\>/i, "")		
 			# convert safe tags to markdown
@@ -204,16 +205,22 @@ class Joint extends EventEmitter
 		catch
 			console.log "error sanitizing html:"
 			console.log clean
+			return null
 		finally
 			return clean			
 	
 
 	_doNewReply: (msgid, ticket, form, attachments) =>
 		self = @
+
+		clean = self.cleanHTML form.description or "Error cleaning email body."
+		# strip quoted lines we put in
+		clean = clean.replace(/^.*Please only type your reply above this line(.|\n|\r)*/m,'')	
+
 		message = 
 			from: form.email
 			private: false
-			text: form.description
+			text: clean
 			fromuser: true
 			ticketid: ticket._id
 
@@ -273,6 +280,8 @@ class Joint extends EventEmitter
 		# clean up old ID strings from subject, if any
 		if form.subject
 			form.subject = form.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
+		# won't be an owned ticket
+		form.personal = null
 
 		async.waterfall([
 			(cb) ->
