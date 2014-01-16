@@ -2,7 +2,6 @@
 {EventEmitter} = require "events" 
 async = require "async"
 marked = require "marked"
-sanitizer = require "sanitizer"
 {toMarkdown} = require "to-markdown"
 
 marked.setOptions(
@@ -303,16 +302,6 @@ class SocketHandler extends EventEmitter
 	bulkDelete: (tickets, callback) ->
 		self = @
 		async.each tickets, self.deleteTicket, callback
-			
-	cleanHTML: (html) -> 
-		# remove unsafe tags
-		clean = sanitizer.sanitize html
-		# convert safe tags to markdown
-		clean = toMarkdown clean
-		# Remove all remaining HTML tags.
-		clean = clean.replace(/<(?:.|\n)*?>/gm, "")
-
-		return clean
 
 	updateMessage: (message, callback) =>
 		self = @
