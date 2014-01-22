@@ -61,16 +61,19 @@ class EmailHandler extends EventEmitter
 			email: self.ctxioemail
 			status_ok: 1
 		, (err, response) ->
-			if err 
-				callback err
-			else 
-				if response.body?.length > 0
-					self.ctxioID = response.body[0].id 
-					self.emit "getIDSuccess", self.ctxioID
-					callback null
-				else
-					callback "Working ContextIO ID for " + self.ctxioemail + " could not be found."
-	
+			if !err and response?.body.length > 0
+				self.ctxioID = response.body[0].id 
+				self.emit "getIDSuccess", self.ctxioID
+				callback null
+			else if self.settings.contextIO?.id
+				# couldn't query contextIO account ID, going with one from settings, hope that contextIO starts working again
+				console.log "Failed to retrieve working ContextIO account ID; continuing with saved one."
+				self.ctxioID = self.settings.contextIO.id
+				self.emit "getIDSuccess", self.ctxioID
+				callback null
+			else
+				callback "Working ContextIO ID could not be found."
+
 	
 	flagMessage: (msgid) =>
 		self = @

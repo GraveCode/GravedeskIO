@@ -79,15 +79,15 @@ addViews = (db, cb) ->
 
 # main function exported to server.coffee
 module.exports = (couchdb, callback) ->
-	c = new(cradle.Connection)(couchdb.dbServer, couchdb.dbPort,
+	c = new(cradle.Connection)(couchdb.server, couchdb.port,
 			cache: couchdb.cache
 			raw: false
 			auth:
-				username: couchdb.dbUser 
-				password: couchdb.dbPass
+				username: couchdb.user 
+				password: couchdb.pass
 		)
 
-	db = c.database couchdb.dbName
+	db = c.database couchdb.name
 
 	async.waterfall([
 		(cb) ->
