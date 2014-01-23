@@ -18,16 +18,16 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getStatics', @getStatics
 		@socket.on 'getMyTickets', @getMyTickets
 		@socket.on 'getAllTickets', @getAllTickets
-		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
-		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
+		@socket.on 'getTicketCounts', @getTicketCounts
+		@socket.on 'getMessages', @getMessages
 		@socket.on 'addTicket', @joint.addTicket
 		@socket.on 'addMessage', @joint.addMessage
 		@socket.on 'closeWithEmail', @joint.closeWithEmail
-		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
-		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
+		@socket.on 'updateTicket', @updateTicket
+		@socket.on 'deleteTicket', @deleteTicket
 		@socket.on 'updateMessage', @updateMessage
 		@socket.on 'deleteMessage', @deleteMessage
-		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
+		@socket.on 'bulkDelete', @bulkDelete
 
 	isAdmin: =>
 		i = @settings.admins.indexOf @user?.emails[0]?.value
@@ -209,7 +209,7 @@ class SocketHandler extends EventEmitter
 
 			
 
-	getMessages: (id, callback) ->
+	getMessages: (id, callback) =>
 		self = @
 		unwrapObject = (item) ->
 			return item
@@ -254,7 +254,7 @@ class SocketHandler extends EventEmitter
 		else 
 			callback "Error accessing ticket, invalid ID"
 
-	updateTicket: (ticket, callback) ->
+	updateTicket: (ticket, callback) =>
 		self = @
 		# make sure timestamp is in the past!
 		timestamp = Date.now() - 1000
@@ -314,7 +314,7 @@ class SocketHandler extends EventEmitter
 					callback null
 			)
 
-	bulkDelete: (tickets, callback) ->
+	bulkDelete: (tickets, callback) =>
 		self = @
 		async.each tickets, self.deleteTicket, callback
 
