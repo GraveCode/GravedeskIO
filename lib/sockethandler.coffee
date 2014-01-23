@@ -3,6 +3,7 @@
 async = require "async"
 marked = require "marked"
 {toMarkdown} = require "to-markdown"
+util = require "util"
 
 marked.setOptions(
 	gfm: true
@@ -15,8 +16,8 @@ class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @joint, @lang, @settings) ->
 		@user = @socket?.handshake?.user
 		@socket.on 'getStatics', @getStatics
-		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
-		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
+		@socket.on 'getMyTickets', @getMyTickets
+		@socket.on 'getAllTickets', @getAllTickets
 		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
 		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
 		@socket.on 'addTicket', @joint.addTicket
@@ -55,7 +56,7 @@ class SocketHandler extends EventEmitter
 		callback null, statics
 
 
-	getMyTickets: (user, callback) ->
+	getMyTickets: (user, callback) =>
 
 		@db.view 'tickets/byuser', { descending: true, endkey: [user], startkey: [user,{}] } , (err, results) ->
 			if err
@@ -77,8 +78,13 @@ class SocketHandler extends EventEmitter
 				callback null, open, closed
 
 
-	getAllTickets: (group, type, callback) ->
+	getAllTickets: (group, type, pagesize, start, callback) =>
 		self = @
+		if pagesize and typeof(pagesize) is "number"
+			limit = pagesize
+		else
+			limit = 1000
+
 		unwrapObject = (item) ->
 			return item
 
@@ -91,24 +97,32 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-
-				if group == 0
-					# personal tickets
-					if type == 0
-						self.db.view 'tickets/personalopen', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] } , cb
-					else if type == 1
-						self.db.view 'tickets/personalclosed', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] } , cb
-					else
-						cb "unknown ticket type"
-
+				# generic startkeys
+				if group == 0 and type == 0
+					startkey = [self.user.emails[0].value,{},{}]
+					endkey = [self.user.emails[0].value]
+					view = 'tickets/personalopen'
+				else if group == 0 and type == 1
+					startkey = [self.user.emails[0].value,{}]
+					endkey = [self.user.emails[0].value]
+					view = 'tickets/personalclosed'
+				else if type == 0
+					startkey = [group,{},{}]
+					endkey = [group]
+					view = 'tickets/open'
+				else if type == 1
+					startkey = [group,{}]
+					endkey = [group]
+					view = 'tickets/closed'
 				else
-					# general tickets
-					if type == 0
-						self.db.view 'tickets/open', { reduce: false, descending: true, endkey: [group], startkey: [group,{},{}] } , cb
-					else if type == 1
-						self.db.view 'tickets/closed', { reduce: false, descending: true, endkey: [group], startkey: [group,{}] } , cb
-					else
-						cb "Unknown ticket type"
+					cb "Unable to calculate starting key - invalid type or start."
+
+				# override startkey if defined
+				if start and util.isArray(start)
+					startkey = start	
+
+				console.log startkey
+				self.db.view view, { reduce: false, descending: true, endkey: endkey, startkey: startkey, limit: limit } , cb
 
 			, (results, cb) ->
 					# strip id/key headers
@@ -117,7 +131,8 @@ class SocketHandler extends EventEmitter
 
 			], (err, results) ->
 				if err
-					callback err
+					console.log err
+					callback "Unable to retrieve tickets."
 				else
 					callback null, results
 			)

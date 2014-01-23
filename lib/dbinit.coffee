@@ -97,7 +97,7 @@ module.exports = (couchdb, callback) ->
 		, (exists, cb) ->
 			if exists
 				# remove old view data
-				console.log 'Connected to database "' + couchdb.dbName + '" on ' + couchdb.dbServer
+				console.log 'Connected to database "' + couchdb.name + '" on ' + couchdb.server
 				db.viewCleanup()
 				# db exists, so add design document views if necessary
 				if couchdb.overwriteViews
