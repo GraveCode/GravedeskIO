@@ -19,6 +19,7 @@ class SocketHandler extends EventEmitter
 		@socket.on 'getMyTickets', @getMyTickets
 		@socket.on 'getAllTickets', @getAllTickets
 		@socket.on 'getTicketCounts', @getTicketCounts
+		@socket.on 'getTicketPages', @getTicketPages
 		@socket.on 'getMessages', @getMessages
 		@socket.on 'addTicket', @joint.addTicket
 		@socket.on 'addMessage', @joint.addMessage
@@ -97,31 +98,13 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
-				# generic startkeys
-				if group == 0 and type == 0
-					startkey = [self.user.emails[0].value,{},{}]
-					endkey = [self.user.emails[0].value]
-					view = 'tickets/personalopen'
-				else if group == 0 and type == 1
-					startkey = [self.user.emails[0].value,{}]
-					endkey = [self.user.emails[0].value]
-					view = 'tickets/personalclosed'
-				else if type == 0
-					startkey = [group,{},{}]
-					endkey = [group]
-					view = 'tickets/open'
-				else if type == 1
-					startkey = [group,{}]
-					endkey = [group]
-					view = 'tickets/closed'
-				else
-					cb "Unable to calculate starting key - invalid type or start."
+				self._getKeys group, type, cb
+
+			, (startkey, endkey, view, cb) ->	
 
 				# override startkey if defined
 				if start and util.isArray(start)
 					startkey = start	
-
-				console.log startkey
 				self.db.view view, { reduce: false, descending: true, endkey: endkey, startkey: startkey, limit: limit } , cb
 
 			, (results, cb) ->
@@ -137,9 +120,69 @@ class SocketHandler extends EventEmitter
 					callback null, results
 			)
 
+	getTicketPages: (limit, length, group, type, callback) =>
+		self = @
+		if length and limit and typeof(length) is "number" and typeof(limit) is "number"
+			numOfPages = Math.ceil (length/limit)
+			async.waterfall([
+				(cb) ->
+					self._getKeys group, type, cb	
+	
+				, (startkey, endkey, view, cb) ->
+					count = numOfPages
+					result = [startkey]
+					if count <= 1
+						cb null, result
+					else
+						iterator = (start) ->
+							self.db.view view, { group: false, reduce:false, descending: true, endkey: endkey, startkey: start, limit: 1, skip: limit }, (err, res) ->
+								if err 
+									cb err
+								else if res.length > 0
+									key = res[0]?.key
+									result.push key
+									count = count - 1
+									if count <= 1
+										cb null, result
+									else
+										iterator key
+								else
+									cb null
+	
+						iterator startkey
+
+			], callback)
+			
+		else
+			callback "invalid limit or length"
+
+
+	_getKeys: (group, type, callback) =>
+		self = @
+		# generic startkeys
+		if group == 0 and type == 0
+			startkey = [self.user.emails[0].value,{},{}]
+			endkey = [self.user.emails[0].value]
+			view = 'tickets/personalopen'
+		else if group == 0 and type == 1
+			startkey = [self.user.emails[0].value,{}]
+			endkey = [self.user.emails[0].value]
+			view = 'tickets/personalclosed'
+		else if type == 0
+			startkey = [group,{},{}]
+			endkey = [group]
+			view = 'tickets/open'
+		else if type == 1
+			startkey = [group,{}]
+			endkey = [group]
+			view = 'tickets/closed'
+		else
+			callback "Unable to calculate keys - invalid type or group."	
+		# 
+		callback null, startkey, endkey, view	
+
 	getTicketCounts: (type, callback) =>
 		self = @
-
 		async.waterfall([
 			(cb) ->
 				# authentication check
@@ -150,50 +193,17 @@ class SocketHandler extends EventEmitter
 
 			, (cb) ->
 				iterator = (group, nextcb) ->
-					if group == 0
-						# personal tickets
-						if type == 0
-							self.db.view 'tickets/personalopen', { group: false, reduce:true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-
-						else if type == 1
-							self.db.view 'tickets/personalclosed', {group: false, reduce: true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-
+					self._getKeys group, type, (err, startkey, endkey, view) ->
+						if err
+							nextcb err
 						else
-							cb "Unknown ticket type"
-
-					else 
-						# general tickets
-						if type == 0
-							self.db.view 'tickets/open', { group: false, reduce:true, descending: true, endkey: [group], startkey: [group,{},{}] }, (err, res) ->
+							self.db.view view, { group: false, reduce:true, descending: true, endkey: endkey, startkey: startkey }, (err, res) ->
 								if err
 									nextcb err
 								else if res[0]?.value
 									nextcb null, res[0].value
 								else
 									nextcb null, 0
-
-						else if type == 1
-							self.db.view 'tickets/closed', {group: false, reduce: true, descending: true, endkey: [group], startkey: [group,{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-						else
-							cb "Unknown ticket type"
 
 				length = self.settings.groups.length
 				if length > 0
@@ -203,9 +213,7 @@ class SocketHandler extends EventEmitter
 					cb "invalid length"
 
 
-		], (err, results) ->
-			callback err, results
-		)
+		], callback)
 
 			
 
