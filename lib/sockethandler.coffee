@@ -3,6 +3,7 @@
 async = require "async"
 marked = require "marked"
 {toMarkdown} = require "to-markdown"
+util = require "util"
 
 marked.setOptions(
 	gfm: true
@@ -15,18 +16,19 @@ class SocketHandler extends EventEmitter
 	constructor: (@socket, @db, @joint, @lang, @settings) ->
 		@user = @socket?.handshake?.user
 		@socket.on 'getStatics', @getStatics
-		@socket.on 'getMyTickets', (username, callback) => @getMyTickets username, callback	
-		@socket.on 'getAllTickets', (group, type, callback) => @getAllTickets group, type, callback
-		@socket.on 'getTicketCounts', (type, length, callback) => @getTicketCounts type, length, callback
-		@socket.on 'getMessages', (id, callback) => @getMessages id, callback
+		@socket.on 'getMyTickets', @getMyTickets
+		@socket.on 'getAllTickets', @getAllTickets
+		@socket.on 'getTicketCounts', @getTicketCounts
+		@socket.on 'getTicketPages', @getTicketPages
+		@socket.on 'getMessages', @getMessages
 		@socket.on 'addTicket', @joint.addTicket
 		@socket.on 'addMessage', @joint.addMessage
 		@socket.on 'closeWithEmail', @joint.closeWithEmail
-		@socket.on 'updateTicket', (ticket, callback) => @updateTicket ticket, callback
-		@socket.on 'deleteTicket', (ticket, callback) => @deleteTicket ticket, callback
+		@socket.on 'updateTicket', @updateTicket
+		@socket.on 'deleteTicket', @deleteTicket
 		@socket.on 'updateMessage', @updateMessage
 		@socket.on 'deleteMessage', @deleteMessage
-		@socket.on 'bulkDelete', (tickets, callback) => @bulkDelete tickets, callback
+		@socket.on 'bulkDelete', @bulkDelete
 
 	isAdmin: =>
 		i = @settings.admins.indexOf @user?.emails[0]?.value
@@ -55,7 +57,7 @@ class SocketHandler extends EventEmitter
 		callback null, statics
 
 
-	getMyTickets: (user, callback) ->
+	getMyTickets: (user, callback) =>
 
 		@db.view 'tickets/byuser', { descending: true, endkey: [user], startkey: [user,{}] } , (err, results) ->
 			if err
@@ -77,8 +79,13 @@ class SocketHandler extends EventEmitter
 				callback null, open, closed
 
 
-	getAllTickets: (group, type, callback) ->
+	getAllTickets: (group, type, pagesize, start, callback) =>
 		self = @
+		if pagesize and typeof(pagesize) is "number"
+			limit = pagesize
+		else
+			limit = 1000
+
 		unwrapObject = (item) ->
 			return item
 
@@ -91,24 +98,14 @@ class SocketHandler extends EventEmitter
 					cb "Not authorized to retrieve all tickets!"
 
 			, (cb) ->
+				self._getKeys group, type, cb
 
-				if group == 0
-					# personal tickets
-					if type == 0
-						self.db.view 'tickets/personalopen', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] } , cb
-					else if type == 1
-						self.db.view 'tickets/personalclosed', { reduce: false, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] } , cb
-					else
-						cb "unknown ticket type"
+			, (startkey, endkey, view, cb) ->	
 
-				else
-					# general tickets
-					if type == 0
-						self.db.view 'tickets/open', { reduce: false, descending: true, endkey: [group], startkey: [group,{},{}] } , cb
-					else if type == 1
-						self.db.view 'tickets/closed', { reduce: false, descending: true, endkey: [group], startkey: [group,{}] } , cb
-					else
-						cb "Unknown ticket type"
+				# override startkey if defined
+				if start and util.isArray(start)
+					startkey = start	
+				self.db.view view, { reduce: false, descending: true, endkey: endkey, startkey: startkey, limit: limit } , cb
 
 			, (results, cb) ->
 					# strip id/key headers
@@ -117,14 +114,75 @@ class SocketHandler extends EventEmitter
 
 			], (err, results) ->
 				if err
-					callback err
+					console.log err
+					callback "Unable to retrieve tickets."
 				else
 					callback null, results
 			)
 
+	getTicketPages: (limit, length, group, type, callback) =>
+		self = @
+		if length and limit and typeof(length) is "number" and typeof(limit) is "number"
+			numOfPages = Math.ceil (length/limit)
+			async.waterfall([
+				(cb) ->
+					self._getKeys group, type, cb	
+	
+				, (startkey, endkey, view, cb) ->
+					count = numOfPages
+					result = [startkey]
+					if count <= 1
+						cb null, result
+					else
+						iterator = (start) ->
+							self.db.view view, { group: false, reduce:false, descending: true, endkey: endkey, startkey: start, limit: 1, skip: limit }, (err, res) ->
+								if err 
+									cb err
+								else if res.length > 0
+									key = res[0]?.key
+									result.push key
+									count = count - 1
+									if count <= 1
+										cb null, result
+									else
+										iterator key
+								else
+									cb null
+	
+						iterator startkey
+
+			], callback)
+			
+		else
+			callback "invalid limit or length"
+
+
+	_getKeys: (group, type, callback) =>
+		self = @
+		# generic startkeys
+		if group == 0 and type == 0
+			startkey = [self.user.emails[0].value,{},{}]
+			endkey = [self.user.emails[0].value]
+			view = 'tickets/personalopen'
+		else if group == 0 and type == 1
+			startkey = [self.user.emails[0].value,{}]
+			endkey = [self.user.emails[0].value]
+			view = 'tickets/personalclosed'
+		else if type == 0
+			startkey = [group,{},{}]
+			endkey = [group]
+			view = 'tickets/open'
+		else if type == 1
+			startkey = [group,{}]
+			endkey = [group]
+			view = 'tickets/closed'
+		else
+			callback "Unable to calculate keys - invalid type or group."	
+		# 
+		callback null, startkey, endkey, view	
+
 	getTicketCounts: (type, callback) =>
 		self = @
-
 		async.waterfall([
 			(cb) ->
 				# authentication check
@@ -135,50 +193,17 @@ class SocketHandler extends EventEmitter
 
 			, (cb) ->
 				iterator = (group, nextcb) ->
-					if group == 0
-						# personal tickets
-						if type == 0
-							self.db.view 'tickets/personalopen', { group: false, reduce:true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{},{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-
-						else if type == 1
-							self.db.view 'tickets/personalclosed', {group: false, reduce: true, descending: true, endkey: [self.user.emails[0].value], startkey: [self.user.emails[0].value,{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-
+					self._getKeys group, type, (err, startkey, endkey, view) ->
+						if err
+							nextcb err
 						else
-							cb "Unknown ticket type"
-
-					else 
-						# general tickets
-						if type == 0
-							self.db.view 'tickets/open', { group: false, reduce:true, descending: true, endkey: [group], startkey: [group,{},{}] }, (err, res) ->
+							self.db.view view, { group: false, reduce:true, descending: true, endkey: endkey, startkey: startkey }, (err, res) ->
 								if err
 									nextcb err
 								else if res[0]?.value
 									nextcb null, res[0].value
 								else
 									nextcb null, 0
-
-						else if type == 1
-							self.db.view 'tickets/closed', {group: false, reduce: true, descending: true, endkey: [group], startkey: [group,{}] }, (err, res) ->
-								if err
-									nextcb err
-								else if res[0]?.value
-									nextcb null, res[0].value
-								else
-									nextcb null, 0
-						else
-							cb "Unknown ticket type"
 
 				length = self.settings.groups.length
 				if length > 0
@@ -188,13 +213,11 @@ class SocketHandler extends EventEmitter
 					cb "invalid length"
 
 
-		], (err, results) ->
-			callback err, results
-		)
+		], callback)
 
 			
 
-	getMessages: (id, callback) ->
+	getMessages: (id, callback) =>
 		self = @
 		unwrapObject = (item) ->
 			return item
@@ -239,7 +262,7 @@ class SocketHandler extends EventEmitter
 		else 
 			callback "Error accessing ticket, invalid ID"
 
-	updateTicket: (ticket, callback) ->
+	updateTicket: (ticket, callback) =>
 		self = @
 		# make sure timestamp is in the past!
 		timestamp = Date.now() - 1000
@@ -299,7 +322,7 @@ class SocketHandler extends EventEmitter
 					callback null
 			)
 
-	bulkDelete: (tickets, callback) ->
+	bulkDelete: (tickets, callback) =>
 		self = @
 		async.each tickets, self.deleteTicket, callback
 

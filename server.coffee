@@ -40,7 +40,7 @@ passport.use new GoogleStrategy(
 		done null, profile
 )
 
-sessionStore = new redisStore {host:'127.0.0.1', port:6379, prefix:'sessionStore'}
+sessionStore = new redisStore {host: settings.redisdb.server, port: settings.redisdb.port, prefix:'sessionStore'}
 
 app.enable 'trust proxy'
 

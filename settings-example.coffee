@@ -1,14 +1,20 @@
 module.exports = {
 	# couch db settings
 	couchdb: {
-		dbServer: '127.0.0.1'
-		dbPort: 5984
-		dbName: 'test'
-		dbUser: 'admin'
-		dbPass: 'password'
+		server: '127.0.0.1'
+		port: 5984
+		name: 'test'
+		user: 'admin'
+		pass: 'password'
 		# create up to date couchdb views at every server start
 		overwriteViews: false
 		cache: true
+	}
+
+	# redis session store
+	redisdb: {
+		server: '127.0.0.1'
+		port: 6379
 	}
 
 	# default local app port
@@ -30,6 +36,8 @@ module.exports = {
 		# oauth key and id
 		key: "12345"
 		secret: "secret"
+		# maibox id (optional) for account on context.io
+		id: "0123456789abcde"
 		# mailbox account address set on context.io
 		email: "itsupport@example.com"
 		# mailbox that incoming mails will be read from
