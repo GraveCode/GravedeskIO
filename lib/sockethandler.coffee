@@ -135,7 +135,7 @@ class SocketHandler extends EventEmitter
 						cb null, result
 					else
 						iterator = (start) ->
-							self.db.view view, { group: false, reduce:false, descending: true, endkey: endkey, startkey: start, limit: 1, skip: limit }, (err, res) ->
+							self.db.view view, { reduce:false, descending: true, endkey: endkey, startkey: start, limit: 1, skip: limit }, (err, res) ->
 								if err 
 									cb err
 								else if res.length > 0
