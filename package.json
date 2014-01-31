@@ -15,6 +15,7 @@
 		"passport.socketio": "1.2.x",
 		"marked": "0.2.x",
 		"bleach": "0.2.x",
+		"html-sanitiser": "https://github.com/p-baleine/html-sanitiser/tarball/topic-update-jsdom",
 		"to-markdown": "0.0.x",
 		"connect-redis": "1.4.x",
 		"nodemailer": "0.5.x"

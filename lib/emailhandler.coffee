@@ -244,9 +244,9 @@ class EmailHandler extends EventEmitter
 	_processMessage: (msgid, msg, files) =>
 		checkbodytype = (obj) ->
 			if obj.type is "text/plain"
-				form.text += obj.content
+				form.rawtext += obj.content
 			else if obj.type is "text/html"
-				form.html += obj.content
+				form.rawhtml += obj.content
 			return null
 
 		self = @
@@ -254,10 +254,8 @@ class EmailHandler extends EventEmitter
 			email: msg.addresses.from?.email or null
 			name: msg.addresses.from?.name or null
 			subject: msg?.subject or null
-			priority: 1
-			team: 1
-			text: ""
-			html: ""
+			rawtext: ""
+			rawhtml: ""
 		
 		attachments = files or []
 		checkbodytype obj for obj in msg.body
