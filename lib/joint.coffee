@@ -2,7 +2,8 @@
 {EventEmitter} = require "events" 
 async = require "async"
 marked = require "marked"
-san = require "html-sanitiser"
+bleach = require "bleach"
+
 {toMarkdown} = require "to-markdown"
 
 marked.setOptions(
@@ -115,11 +116,14 @@ class Joint extends EventEmitter
 
 	cleanHTML: (html) -> 
 		clean = ""
+		whitelist = ("font strong em b i p code pre tt samp kbd var sub q sup dfn cite big small address hr br div span h1 h2 h3 h4 h5 h6 ul ol li dl dt dd abbr acronym a img blockquote del ins table caption tbody tfoot thead tr th td article aside canvas details figcaption figure footer header hgroup menu nav section summary time mark").split(" ")
+		options = 
+			mode: 'white'
+			list: whitelist
+
 		try
 			# remove unsafe tags
-			clean = san.sanitiseHTML html
-			# remove img tags in body (thanks, osx mail)
-			clean = clean.replace(/<img[^>]+\>/i, "")		
+			clean = bleach.sanitize html, options
 		catch
 			console.log "error sanitizing html:"
 			console.log clean
