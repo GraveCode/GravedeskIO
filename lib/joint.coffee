@@ -21,7 +21,7 @@ class Joint extends EventEmitter
 
 	addMessage: (data, names, suppressSend, callback) =>
 		self = @
-		clean = self.cleanHTML(data.text) or "Error cleaning message text."
+		clean = self.cleanHTML(data.text) or "No message text."
 		message = 
 			from: data.from
 			private: data.private
@@ -46,9 +46,9 @@ class Joint extends EventEmitter
 				self.socket.emit('messageAdded', message.ticketid, message)
 
 				self._updateTicket data.ticketid, names, message, (err, res, ticket) ->
-					cb err, res, ticket, clean, message
+					cb err, res, ticket, message
 
-		], (err, result, ticket, text, message) ->
+		], (err, result, ticket, message) ->
 			if err
 					console.log 'Unable to add message. '
 					console.log err
@@ -56,11 +56,12 @@ class Joint extends EventEmitter
 			else
 				ticket._rev = result.rev
 				self.socket.emit('ticketUpdated', ticket._id, ticket)
-				# local emit for autoreply
-				if message.private or suppressSend or ticket.recipients.length < 1
-					# ignore message
+				# Ignore messages that are private, added by the user, just closed or has no recipients
+				if message.private or message.fromuser or suppressSend or ticket.recipients.length < 1
 				else
-					#self.emit 'autoReply', result.id, text, false, false, message
+					options =
+						message: message
+					self.emit 'autoReply', result.id, options
 				callback null, result
 		)
 
@@ -107,8 +108,6 @@ class Joint extends EventEmitter
 			else
 				msg = 'Ticket added to system. '
 				console.log msg + "ID: " + results.id
-				# local emit for autoreply
-				#self.emit 'autoReply', results.id, text, true, false, null
 				# socket emit for web interface
 				self.socket.emit 'ticketAdded', results.id, ticket
 				callback null, msg
@@ -131,11 +130,15 @@ class Joint extends EventEmitter
 		finally
 			return clean			
 
-	closeWithEmail: (ticketid, message) =>
-		self = @
-		if message 
-			message = self.cleanHTML(message)
-		@emit 'autoReply', ticketid, message, false, true, null
+	closeWithEmail: (ticketid, name, message) =>
+		if message
+			message = @cleanHTML(message)
+		options = {
+			closing: true
+			text: message
+			name: name
+		}
+		@emit 'autoReply', ticketid, options
 	
 	emailToTicket: (msgid, form, attachments) =>
 		self = @
@@ -238,14 +241,18 @@ class Joint extends EventEmitter
 
 				# add first message to db	
 				self._createMessage message, (err, res, final_message) ->
-					cb err, results, final_ticket
+					cb err, results, final_ticket, final_message
 					
-			, (results, ticket, cb) ->
+			, (results, ticket, message, cb) ->
 				msg = 'Ticket added to system. '
 				console.log msg + "ID: " + results.id
 				self.socket.emit 'ticketAdded', results.id, ticket
 				# autoreply with message text
-
+				options = 
+					message: message
+					email: true
+					isNew: true
+				self.emit 'autoReply', message.ticketid, options
 				# now add attachments to that ticket
 				if attachments.length > 0
 					self._emailTicketAttachments results, attachments, cb
@@ -291,6 +298,13 @@ class Joint extends EventEmitter
 				final_message._id = results.id
 				final_message._rev = results.rev
 				self.socket.emit('messageAdded', final_message.ticketid, final_message)
+				options = {
+					message: final_message
+					email: true
+					isNew: false
+				}
+				self.emit 'autoReply', final_message.ticketid, options
+
 				# now add attachments to that ticket
 				if attachments.length > 0
 					console.log "adding attachments"
