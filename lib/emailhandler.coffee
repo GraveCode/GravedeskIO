@@ -357,7 +357,6 @@ class EmailHandler extends EventEmitter
 					self.emit "autoReplyError", err, ticketid
 				else			
 					self.emit "autoReplySuccess", result
-					console.log result
 		)
 
 module.exports = EmailHandler
