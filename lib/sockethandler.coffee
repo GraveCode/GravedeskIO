@@ -326,12 +326,18 @@ class SocketHandler extends EventEmitter
 		self = @
 		async.each tickets, self.deleteTicket, callback
 
-	updateMessage: (message, callback) =>
+	updateMessage: (message, restoreOrig, callback) =>
 		self = @
 		if self.isAdmin() or self.isTech()
-			clean = self.joint.cleanHTML message.text
-			message.text = clean
-			message.html = marked clean
+			if restoreOrig
+				cleantext = self.joint.cleanHTML message.rawtext
+				cleanhtml = self.joint.cleanHTML message.rawhtml
+				message.text = cleantext
+				message.html = cleanhtml
+			else
+				cleantext = self.joint.cleanHTML message.text
+				message.text = cleantext
+				message.html = marked cleantext
 			self.db.save message._id, message._rev, message, (err, res) ->
 				if err
 					console.log 'Unable to save message ' + message._id
