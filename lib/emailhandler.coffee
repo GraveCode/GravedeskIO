@@ -244,9 +244,9 @@ class EmailHandler extends EventEmitter
 	_processMessage: (msgid, msg, files) =>
 		checkbodytype = (obj) ->
 			if obj.type is "text/plain"
-				form.text += obj.content
+				form.rawtext += obj.content
 			else if obj.type is "text/html"
-				form.html += obj.content
+				form.rawhtml += obj.content
 			return null
 
 		self = @
@@ -254,10 +254,8 @@ class EmailHandler extends EventEmitter
 			email: msg.addresses.from?.email or null
 			name: msg.addresses.from?.name or null
 			subject: msg?.subject or null
-			priority: 1
-			team: 1
-			text: ""
-			html: ""
+			rawtext: ""
+			rawhtml: ""
 		
 		attachments = files or []
 		checkbodytype obj for obj in msg.body
@@ -276,8 +274,7 @@ class EmailHandler extends EventEmitter
 			else
 				self.emit "moveMessageSuccess"
 
-
-	_autoReply: (ticketid, senderText, isNew, isClosed, message) =>
+	_autoReply: (ticketid, options) =>
 		self = @
 
 		async.waterfall([
@@ -323,19 +320,36 @@ class EmailHandler extends EventEmitter
 					"subject": "RE: " + ticket.title + " - ID: <" + ticketid + ">"	
 
 				link = "[online](" + self.settings.clientURL + "/messages/?id=" + ticketid + ")."
-				if isNew
-					outmail.html = marked(self.lang.newAutoReply0 + link + self.lang.newAutoReply1 + senderText)
-				else if isClosed and !senderText
-					outmail.html = marked(self.lang.standardClose + link) 
-				else if isClosed
-					outmail.html = marked(self.lang.customClose0 + link + self.lang.customClose1 + senderText)
-				else if message?.fromuser
-					outmail.html = marked(self.lang.existingAutoReply0 + link + self.lang.existingAutoReply1 + senderText)
-				else if message
-					outmail.html = marked(self.lang.adminReply0 + ticket.names[message.from] + self.lang.adminReply1 + link + self.lang.adminReply2 + senderText)
+
+				# email processed as new ticket
+				if options?.email and options?.isNew and options?.message
+					sub = self.lang.replyHeader + self.lang.newTicket[0] + link + self.lang.newTicket[1]
+					outmail.text =  marked(sub + options.message.text)
+					outmail.html = marked(sub) + options.message.html
+
+				# email processed as reply to open ticket
+				else if options?.email and options?.message
+					sub = self.lang.replyHeader + self.lang.existingReply[0] + link + self.lang.existingReply[1]
+					outmail.text =  marked(sub + options.message.text)
+					outmail.html = marked(sub) + options.message.html
+
+				# message reply from admin
+				else if options?.message
+					outmail.text = self.lang.replyHeader + ticket.names[options.message?.from] + self.lang.adminReply[0] + link + self.lang.adminReply[1] + options.message?.text
+					outmail.html = marked(outmail.text)
+
+				# closed with custom reply
+				else if options?.closing and options?.text and options?.name
+					outmail.text = self.lang.customClose[0] + options.name + self.lang.customClose[1] + link + self.lang.customClose[2] + options.text
+					outmail.html = marked(outmail.text)
+
+				# closed with no reply
+				else if options?.closing and options?.name
+					outmail.text = self.lang.standardClose[0] + options.name + self.lang.standardClose[1] + link
+					outmail.html = marked(outmail.text)
 				else
 					cb "Couldn't work out what type of autoreply to do! "
-	
+				
 				cb null, outmail
 
 		], (err, result) ->

@@ -1,30 +1,32 @@
 module.exports = {
-	"standardClose": "This job ticket with IT Support has now been closed, as we believe the reported issue has been resolved. Thank you.\n\n" +
-		"You can see the history of this ticket "
 
-	"customClose0": "This job ticket with IT Support has now been closed. You can see the history of this ticket "
-	"customClose1":	"\n\n***\n\n"
+	"replyHeader": "---- _Please only type your reply above this line_ ----\n\n"
 
-	"newAutoReply0": "---- _Please only type your reply above this line_ ----\n\n" + 
-		"Thank you for reporting your issue to IT support. It has been added to our list as a new job ticket, and we will look into it as soon as possible. \n" +
-		"You can reply to this email (above the line) to add new information to the same ticket. \n\n" +
-		"Alternatively, you can view and add more detail "
+	"adminReply": [
+		" has responded to your ticket to IT Support. You can reply to this email, or view this ticket and add your own reply " 
+		"\n\nThey wrote:\n\n***\n\n"
+	]
 
-	"newAutoReply1": "\n\n_Your message:_" + 
-	"\n\n***\n\n"
+	"customClose": [
+		"This ticket with IT Support has been closed by "
+		". You can see the history of this ticket "
+		"\n\nThey wrote:\n\n***\n\n"
+	]
 
-	"existingAutoReply0": "---- _Please only type your reply above this line_ ----\n\nThank you for adding more information to your ticket.\n\n" +
-		"You can view and update this ticket further "
+	"standardClose": [
+		"This ticket with IT Support has been closed by "
+		", as we believe the reported issue has been resolved. Thank you.\n\nYou can see the history of this ticket "
+	]
 
-	"existingAutoReply1": "\n\n_Your message:_" + 
-	"\n\n***\n\n"
+	"existingReply": [
+		"Thank you for adding more information to your ticket with IT Support. You can view and update this ticket further "
+		"\n\nYou wrote:\n\n***\n\n"
+	]
 
-	"adminReply0": "---- _Please only type your reply above this line_ ----\n\n"
-
-	"adminReply1": " has responded to your ticket.\n\n" +
-		"You can see this ticket history and add your own reply " 
-
-	"adminReply2" : "\n\n***\n\n"
+	"newTicket": [
+		"Thank you for reporting your issue to IT support. It has been added to our list as a new ticket, and we will look into it as soon as possible.\n\nYou can reply to this email to add further information to the same ticket, or alternatively, you can view and add more detail "
+		"\n\nYou wrote:\n\n***\n\n"
+	]
 
 	"statuses" : 
 		adminstatus: ["New message", "Note added", "Waiting on user", "Awaiting 3rd party"]
