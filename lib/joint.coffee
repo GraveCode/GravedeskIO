@@ -102,9 +102,9 @@ class Joint extends EventEmitter
 
 				# add first message to db	
 				self._createMessage message, (err, res, final_message) ->
-					cb err, results, final_ticket, clean
+					cb err, results, final_ticket
 					
-		], (err, results, ticket, text) ->
+		], (err, results, ticket) ->
 			if err 
 				msg = 'Unable to save ticket to database! '
 				console.log msg + err
