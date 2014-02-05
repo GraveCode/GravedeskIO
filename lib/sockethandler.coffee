@@ -330,8 +330,8 @@ class SocketHandler extends EventEmitter
 		self = @
 		if self.isAdmin() or self.isTech()
 			if restoreOrig
-				cleantext = self.joint.cleanHTML message.rawtext
-				cleanhtml = self.joint.cleanHTML message.rawhtml
+				cleantext = self.joint.cleanHTML message?.rawtext
+				cleanhtml = self.joint.cleanHTML message?.rawhtml
 				message.text = cleantext
 				message.html = cleanhtml
 			else
