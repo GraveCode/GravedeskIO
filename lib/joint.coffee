@@ -21,13 +21,15 @@ class Joint extends EventEmitter
 
 	addMessage: (data, names, suppressSend, callback) =>
 		self = @
-		clean = self.cleanHTML(data.text) or "No message text."
+		cleantext = self.cleanHTML(data.text) or "No message text."
+		cleanhtml = marked cleantext
 		message = 
 			from: data.from
 			private: data.private
 			rawtext: data.text
-			text: toMarkdown(clean)
-			html: marked(clean)
+			rawhtml: cleanhtml
+			text: toMarkdown(cleantext)
+			html: cleanhtml
 			fromuser: data.fromuser
 			ticketid: data.ticketid
 
@@ -86,13 +88,15 @@ class Joint extends EventEmitter
 				self._createTicket ticket, cb
 
 			, (results, final_ticket, cb) ->
-				clean = self.cleanHTML(data.description) or "Error cleaning message text."
+				cleantext = self.cleanHTML(data.description) or "Error cleaning message text."
+				cleanhtml = marked cleantext
 				message = 
 					from: data.email
 					private: false
 					rawtext: data.description
-					text: toMarkdown(clean)
-					html: marked(clean)
+					rawhtml: cleanhtml
+					text: toMarkdown(cleantext)
+					html: cleanhtml
 					fromuser: true
 					ticketid: results.id
 
