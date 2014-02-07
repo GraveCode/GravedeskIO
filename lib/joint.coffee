@@ -21,22 +21,23 @@ class Joint extends EventEmitter
 
 	addMessage: (data, names, suppressSend, callback) =>
 		self = @
-		cleantext = self.cleanHTML(data.text) or "No message text."
+		cleantext = self.cleanHTML(data?.text) or "No message text."
 		cleanhtml = marked cleantext
 		message = 
-			from: data.from
-			private: data.private
-			rawtext: data.text
+			date: data?.date or (Date.now() - 1000)
+			from: data?.from
+			private: data?.private
+			rawtext: data?.text
 			rawhtml: cleanhtml
 			text: toMarkdown(cleantext)
 			html: cleanhtml
-			fromuser: data.fromuser
-			ticketid: data.ticketid
+			fromuser: data?.fromuser
+			ticketid: data?.ticketid
 
 		async.waterfall([
 			(cb) ->
 				# check we're under max messages count
-				self._countMessages data.ticketid, cb
+				self._countMessages data?.ticketid, cb
 
 			, (cb) ->
 				# save message to db
@@ -47,7 +48,7 @@ class Joint extends EventEmitter
 				message._rev = results.rev
 				self.socket.emit('messageAdded', message.ticketid, message)
 
-				self._updateTicket data.ticketid, names, message, (err, res, ticket) ->
+				self._updateTicket data?.ticketid, names, message, (err, res, ticket) ->
 					cb err, res, ticket, message
 
 		], (err, result, ticket, message) ->
@@ -73,27 +74,29 @@ class Joint extends EventEmitter
 			(cb) -> 
 				nameObj = {}
 				if data?.name
-					nameObj[data.email] = data.name
+					nameObj[data?.email] = data?.name
 				# Add proper name for server user
 				nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
 			
 				ticket = 
-					title: data.subject or "No subject"
-					group: +data.team
-					recipients: [data.email] or null
+					title: data?.subject or "No subject"
+					group: +data?.team
+					recipients: [data?.email] or null
 					names: nameObj 
-					priority: +data.priority
-					personal: data.personal or null
+					priority: +data?.priority
+					personal: data?.personal or null
 				# add ticket to db
 				self._createTicket ticket, cb
 
 			, (results, final_ticket, cb) ->
-				cleantext = self.cleanHTML(data.description) or "Error cleaning message text."
+				cleantext = self.cleanHTML(data?.description) or "Error cleaning message text."
 				cleanhtml = marked cleantext
+				timestamp = Date.now() - 1000
 				message = 
-					from: data.email
+					date: timestamp
+					from: data?.email
 					private: false
-					rawtext: data.description
+					rawtext: data?.description
 					rawhtml: cleanhtml
 					text: toMarkdown(cleantext)
 					html: cleanhtml
@@ -199,9 +202,7 @@ class Joint extends EventEmitter
 			callback err, res, ticket
 
 	_createMessage: (message, callback) =>
-		timestamp = Date.now() - 1000
 		message.type = 'message'
-		message.date = timestamp
 
 		@db.save message, (err, res) ->
 			callback err, res, message
@@ -212,32 +213,34 @@ class Joint extends EventEmitter
 			(cb) ->
 				nameObj = {}
 				if data?.name
-					nameObj[data.email] = data.name
+					nameObj[data?.email] = data?.name
 					# Add proper name for server user
 					nameObj[self.settings.serverEmail.email] = self.settings.serverEmail.name
 
 				ticket = 
 					title: "No subject"
 					group: 1
-					recipients: [data.email] or null
+					recipients: [data?.email] or null
 					names: nameObj 
 					priority: 1
 					personal: null
 				# clean up old ID strings from subject, if any
-				if data.subject
-					ticket.title = data.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
+				if data?.subject
+					ticket.title = data?.subject.replace(/\- ID: \<[a-z|A-Z|0-9]*\>/g, "")
 	
 					# add ticket to db
 				self._createTicket ticket, cb
 
 			, (results, final_ticket, cb) ->
-				cleantext = self.cleanHTML(data.rawtext) or null
-				cleanhtml = self.cleanHTML(data.rawhtml) or null
+				cleantext = self.cleanHTML(data?.rawtext) or null
+				cleanhtml = self.cleanHTML(data?.rawhtml) or null
+				timestamp = Date.now() - 1000
 				message = 
-					from: data.email
+					date: timestamp
+					from: data?.email
 					private: false
-					rawtext: data.rawtext
-					rawhtml: data.rawhtml
+					rawtext: data?.rawtext
+					rawhtml: data?.rawhtml
 					text: cleantext or toMarkdown(cleanhtml)
 					html: cleanhtml or marked(cleantext)
 					ticketid: results.id
@@ -275,15 +278,17 @@ class Joint extends EventEmitter
 	_emailReply: (msgid, ticket, data, attachments) =>
 		self = @
 		# strip quoted lines we put in
-		cleantext = self.cleanHTML(data.rawtext) or null
+		cleantext = self.cleanHTML(data?.rawtext) or null
 		cleantext = cleantext.replace(/^.*Please only type your reply above this line(.|\n|\r)*/m,'')	
-		cleanhtml = self.cleanHTML(data.rawhtml) or null
+		cleanhtml = self.cleanHTML(data?.rawhtml) or null
 		cleanhtml = cleanhtml.replace(/^.*Please only type your reply above this line(.|\n|\r)*/m,'')	
+		timestamp = Date.now() - 1000
 		message = 
-			from: data.email
+			date: timestamp
+			from: data?.email
 			private: false
-			rawtext: data.rawtext
-			rawhtml: data.rawhtml
+			rawtext: data?.rawtext
+			rawhtml: data?.rawhtml
 			text: cleantext or toMarkdown(cleanhtml)
 			html: cleanhtml or marked(cleantext)
 			ticketid: ticket._id
@@ -349,7 +354,7 @@ class Joint extends EventEmitter
 				# we're done here
 				cb null, idData
 			else
-				idData.rev = reply.rev
+				iddata?.rev = reply.rev
 				record = attachments.splice(0,1)[0]
 				# recursion, baby
 				self.db.saveAttachment idData, record, callback
