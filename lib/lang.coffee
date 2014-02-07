@@ -29,10 +29,10 @@ module.exports = {
 	]
 
 	"statuses" : 
-		adminstatus: ["New message", "Note added", "Waiting on user", "Awaiting 3rd party"]
-		adminstatusCSS: ["alert", "success", "secondary", "secondary"]
-		userstatus: ["Recorded", "In progress", "Reply added", "Awaiting 3rd party"]
-		userstatusCSS: ["secondary", "success", "alert", "secondary"]
+		adminstatus: ["New message", "Note added", "Waiting on user", "Awaiting 3rd party", "In progress"]
+		adminstatusCSS: ["alert", "success", "secondary", "secondary", "success"]
+		userstatus: ["Recorded", "In progress", "Reply added", "Awaiting 3rd party", "In progress"]
+		userstatusCSS: ["secondary", "success", "alert", "secondary", "success"]
 		priority: ["Low", "Normal", "High"]
 		priorityCSS: ["", "secondary", "alert"]
 
